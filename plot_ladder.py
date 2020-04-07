@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 from tenpy.models.lattice import Ladder
 
-ax = plt.gca()
+# ax = plt.gca()
+fig, ax = plt.subplots()
 lat = Ladder(5, None, bc='periodic')
 lat.plot_coupling(ax, lat.pairs['nearest_neighbors'], linewidth=5.)
 # lat.plot_order(ax=ax, linestyle='--')
@@ -10,4 +11,5 @@ lat.plot_sites(ax)
 ax.set_aspect('equal')
 ax.get_xaxis().set_visible(False)
 ax.get_yaxis().set_visible(False)
+ax.axis('off')
 plt.show()
