@@ -5,6 +5,8 @@ from tenpy.models.lattice import Ladder
 fig, ax = plt.subplots()
 lat = Ladder(5, None, bc='periodic')
 lat.plot_coupling(ax, lat.pairs['nearest_neighbors'], linewidth=5.)
+# print(lat.pairs['nearest_neighbors'])
+print(lat.unit_cell)
 # lat.plot_order(ax=ax, linestyle='--')
 lat.plot_sites(ax)
 # lat.plot_basis(ax, color='g', linewidth=3.)
