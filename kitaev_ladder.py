@@ -15,7 +15,7 @@ from tenpy.tools.params import get_parameter
 from tenpy.algorithms import dmrg
 # from tenpy.networks import SpinHalfSite
 
-__all__ = ['KitaevLadder']
+__all__ = ['KitaevLadder', 'KitaevLadderModel']
 
 
 class KitaevLadder(Lattice):    
@@ -103,9 +103,9 @@ def plot_lattice():
 
 def run():
 
-    data = dict(QL=[], ent_spectrum=[])
+    data = dict(ent_spectrum=[])
 
-    model_params = dict(conserve=None, Jx=1., Jy=1., Jz=1., L=2, verbose=1)
+    model_params = dict(conserve=None, Jx=1., Jy=1., Jz=1., L=2, verbose=1, bc_MPS='infinite')
 
     dmrg_params = {
         'mixer': True,  # setting this to True helps to escape local minima
