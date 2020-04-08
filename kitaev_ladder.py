@@ -74,11 +74,11 @@ class KitaevLadderModel(CouplingMPOModel):
         Jz = get_parameter(model_params, 'Jz', 1., self.name, True)
 
         for u1, u2, dx in self.lat.NNx:
-            self.add_coupling(Jx, u1, 'Sx', u2, 'Sx', dx)
+            self.add_coupling(-Jx, u1, 'Sx', u2, 'Sx', dx)
         for u1, u2, dx in self.lat.NNy:
-            self.add_coupling(Jy, u1, 'Sy', u2, 'Sy', dx)
+            self.add_coupling(-Jy, u1, 'Sy', u2, 'Sy', dx)
         for u1, u2, dx in self.lat.NNz:
-            self.add_coupling(Jz, u1, 'Sz', u2, 'Sz', dx)
+            self.add_coupling(-Jz, u1, 'Sz', u2, 'Sz', dx)
 
     
 def plot_lattice():
@@ -88,7 +88,7 @@ def plot_lattice():
     lat.plot_coupling(ax, lat.pairs[links_name], linewidth=5.)
     # print(lat.pairs['nearest_neighbors'])
     print(lat.unit_cell)
-    # lat.plot_order(ax=ax, linestyle='--')
+    lat.plot_order(ax=ax, linestyle='--')
     lat.plot_sites(ax)
     # lat.plot_basis(ax, color='g', linewidth=3.)
     ax.set_aspect('equal')
@@ -97,3 +97,5 @@ def plot_lattice():
     ax.axis('off')
     # plt.title(links_name)
     plt.show()
+
+plot_lattice()
