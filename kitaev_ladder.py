@@ -165,32 +165,6 @@ def plot_results(data):
     ax.set_ylabel(r"$ E $")
     plt.savefig("KitaevLadderModel.pdf")
 
-    # plt.figure()
-    # ax = plt.gca()
-    # colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k']
-    # color_by_charge = {}
-    # for phi_ext, spectrum in zip(data['phi_ext'], data['ent_spectrum']):
-    #     for q, s in spectrum:
-    #         q = q[0]
-    #         label = ""
-    #         if q not in color_by_charge:
-    #             label = "{q:d}".format(q=q)
-    #             color_by_charge[q] = colors[len(color_by_charge) % len(colors)]
-    #         color = color_by_charge[q]
-    #         ax.plot(phi_ext * np.ones(s.shape),
-    #                 s,
-    #                 linestyle='',
-    #                 marker='_',
-    #                 color=color,
-    #                 label=label)
-    # ax.set_xlabel(r"$\Phi_y / 2 \pi$")
-    # ax.set_ylabel(r"$ \epsilon_\alpha $")
-    # ax.set_ylim(0., 8.)
-    # ax.legend(loc='upper right')
-    # plt.savefig("haldane_C3_ent_spec_flow.pdf")
-    
-# plot_lattice()
-
 data = run()
 # plot_results(data)
 print(data)
