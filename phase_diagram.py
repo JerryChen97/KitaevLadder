@@ -10,7 +10,7 @@ Jy_list = np.round(Jy_list, decimals=3)
 
 Jz_list = np.arange(-2, 2, .2)
 Jz_list = np.round(Jz_list, decimals=3)
-chi_list = range(30, 50, 4)
+chi_list = [30]
 J_list = [(Jx, Jy, Jz, chi) for Jx in Jx_list for Jy in Jy_list for Jz in Jz_list for chi in chi_list]
 
 # prepare other arguments
