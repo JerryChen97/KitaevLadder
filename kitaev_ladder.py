@@ -3,7 +3,7 @@ import itertools
 import warnings
 import matplotlib.pyplot as plt
 
-
+import tenpy
 from tenpy.networks.site import Site, SpinHalfFermionSite, SpinHalfSite, GroupedSite, SpinSite
 from tenpy.tools.misc import to_iterable, to_iterable_of_len, inverse_permutation
 from tenpy.networks.mps import MPS  # only to check boundary conditions
@@ -40,19 +40,24 @@ class KitaevLadder(Lattice):
         pos = np.array([[0., 0.], [0., 1.], [1., 0.], [1., 1.]])
         kwargs.setdefault('basis', basis)
         kwargs.setdefault('positions', pos)
+        kwargs.setdefault('bc', 'periodic')
+        kwargs.setdefault('bc_MPS', 'infinite')
+        
         NNz = [(0, 1, np.array([0])), (2, 3, np.array([0]))]
         NNx = [(1, 3, np.array([0])), (2, 0, np.array([1]))]
         NNy = [(0, 2, np.array([0])), (3, 1, np.array([1]))]
-        # nNN = [(0, 1, np.array([1])), (1, 0, np.array([1]))]
-        # nnNN = [(0, 0, np.array([2])), (1, 1, np.array([2]))]
+        nNNa = [(1, 2, np.array([0])), (3, 0, np.array([1]))]
+        nNNb = [(0, 3, np.array([0])), (2, 1, np.array([1]))]
+        
         kwargs.setdefault('pairs', {})
         kwargs['pairs'].setdefault('nearest_neighbors_x', NNx)
         kwargs['pairs'].setdefault('nearest_neighbors_y', NNy)
         kwargs['pairs'].setdefault('nearest_neighbors_z', NNz)
-        # kwargs['pairs'].setdefault('nearest_neighbors', NNx+NNy+NNz)
-        # kwargs['pairs'].setdefault('next_nearest_neighbors', nNN)
-        # kwargs['pairs'].setdefault('next_next_nearest_neighbors', nnNN)
+        kwargs['pairs'].setdefault('next_nearest_neighbors_a', nNNa)
+        kwargs['pairs'].setdefault('next_nearest_neighbors_b', nNNb)
+        
         Lattice.__init__(self, [L], sites, **kwargs)
+        
         
 class KitaevLadderModel(CouplingMPOModel):
     def __init__(self, model_params):
@@ -61,12 +66,12 @@ class KitaevLadderModel(CouplingMPOModel):
     def init_sites(self, model_params):
         conserve = get_parameter(model_params, 'conserve', None, self.name)
         fs = SpinHalfSite(conserve=conserve)
-        # gs = GroupedSite([fs, fs, fs, fs])
         return [fs, fs, fs, fs]
 
     def init_lattice(self, model_params):
         L = get_parameter(model_params, 'L', 3, self.name)
         gs = self.init_sites(model_params)
+        model_params.pop("L")
         lat = KitaevLadder(L, gs)
         return lat
 
@@ -76,13 +81,13 @@ class KitaevLadderModel(CouplingMPOModel):
         Jz = get_parameter(model_params, 'Jz', 1., self.name, True)
 
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_z']:
-            self.add_coupling(-Jz, u1, 'Sigmaz', u2, 'Sigmaz', dx)
+            self.add_coupling(-Jz, u1, 'Sx', u2, 'Sx', dx)
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_x']:
-            self.add_coupling(-Jx, u1, 'Sigmax', u2, 'Sigmax', dx)
+            self.add_coupling(-Jx, u1, 'Sz', u2, 'Sz', dx)
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_y']:
-            self.add_coupling(-Jy, u1, 'Sigmay', u2, 'Sigmay', dx)
-
-    
+            self.add_coupling(-Jy, u1, 'Sy', u2, 'Sy', dx)
+         
+        
 def plot_lattice():
     fig, ax = plt.subplots()
     lat = KitaevLadder(5, None, bc='periodic')
@@ -100,71 +105,188 @@ def plot_lattice():
     # plt.title(links_name)
     plt.show()
 
+def run_atomic(
+    chi=30,
+    Jx=1., 
+    Jy=1., 
+    Jz=0., 
+    L=1, 
+    verbose=1, 
+    calc_correlation=True,
+):
 
-def run():
+    #######################
+    # set the paramters for model initialization
+    model_params = dict(conserve=None, Jx=Jx, Jy=Jy, Jz=Jz, L=L, verbose=verbose)
+    # providing a product state as the initial state
+    prod_state = ["up", "up"] * (2 * model_params['L'])
+    # initialize the model
+    M = KitaevLadderModel(model_params)
+    psi = MPS.from_product_state(
+        M.lat.mps_sites(), 
+        prod_state, 
+        bc=M.lat.bc_MPS,
+    )
+    #######################
 
-    data = dict(ent_spectrum=[])
-
-    model_params = dict(conserve=None, Jx=1., Jy=1., Jz=1., L=2, verbose=1, bc_MPS='infinite')
-
+    
+    #######################
+    # set the parameters for the dmrg routine
     dmrg_params = {
-        'mixer': True,  # setting this to True helps to escape local minima
+        'start_env': 10,
+#         'mixer': False,  # setting this to True helps to escape local minima
+        'mixer': True,
         'mixer_params': {
             'amplitude': 1.e-5,
             'decay': 1.2,
             'disable_after': 30
         },
         'trunc_params': {
+            'chi_max': 4,
             'svd_min': 1.e-10,
         },
-        'lanczos_params': {
-            'N_min': 5,
-            'N_max': 20
-        },
-        'chi_list': {
-            0: 9,
-            10: 49,
-            20: 100
-        },
-        'max_E_err': 1.e-10,
-        'max_S_err': 1.e-6,
-        'max_sweeps': 150,
-        'verbose': 1.,
+        'max_E_err': 1.e-6,
+        'max_S_err': 1.e-4,
+        'max_sweeps': 1000,
+        'verbose': verbose,
     }
+    #######################
+    
+    if verbose:
+        print("\n")
+        print("=" * 80)
+        print("="*30 + "START" + "="*30)
+        print("=" * 80)
+        print("Chi = ", chi, '\n')
 
-    prod_state = ["up"] * (4 * model_params['L'])
+    # here we create another new engine for every new chi
+    # this is quite unusual but since some strange issues
+    # we can only treat like this
+    eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
+    eng.reset_stats()
+    eng.trunc_params['chi_max'] = chi
+    info = eng.run()
+#         print("INFO: \n", info)
 
-    eng = None
+    if verbose:
+        print("Before the canonicalization:")
+        print("Bond dim = ", psi.chi)
 
+        print("Canonicalizing...")
+        psi_before = psi.copy()
 
-    print("=" * 100)
+    psi.canonical_form()
 
+    if verbose:
+        ov = psi.overlap(psi_before, charge_sector=0)
+        print("The norm is: ",psi.norm)
+        print("The overlap is: ", ov)
+        print("After the canonicalization:")
+        print("Bond dim = ", psi.chi)
 
-    if eng is None:  # first time in the loop
-        M = KitaevLadderModel(model_params)
-        psi = MPS.from_product_state(M.lat.mps_sites(), prod_state, bc=M.lat.bc_MPS)
-        eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
+        print("Computing properties")
+
+    energy=info[0]
+
+    if verbose:
+        print("Optimizing")
+
+    tenpy.tools.optimization.optimize(3)
+
+    if verbose:
+        print("Loop for chi=%d done." % chi)
+        print("=" * 80)
+        print("="*30 + " END " + "="*30)
+        print("=" * 80)
+        
+    return (energy, psi.copy())
+
+def naming(chi, Jx, Jy, Jz, L):
+    return "KitaevLadder"+"_chi_"+str(chi)+"_Jx_"+str(Jx)+"_Jy_"+str(Jy)+"_Jz_"+str(Jz)+"_L_"+str(L)
+
+def full_path(chi, Jx, Jy, Jz, L):
+    return prefix+naming(chi, Jx, Jy, Jz, L)+".h5"
+""" run the atomic and then save it
+"""
+def run_save(
+    chi=30,
+    Jx=1., 
+    Jy=1., 
+    Jz=0., 
+    L=1, 
+    verbose=1, 
+    calc_correlation=True,
+):
+    file_name = full_path(chi, Jx, Jy, Jz, L)
+    
+    # if the file already existed then don't do the computation again
+    if os.path.isfile(file_name):
+        print("This file already existed")
     else:
-        del eng.engine_params['chi_list']
-        M = KitaevLadderModel(model_params)
-        eng.init_env(model=M)
+        (energy, psi) = run_atomic(
+            chi=chi, 
+            Jx=Jx, 
+            Jy=Jy, 
+            Jz=Jz, 
+            L=L, 
+            verbose=verbose, 
+            calc_correlation=calc_correlation,
+        )
+        data = {
+            "psi": psi,
+            "energy": energy,
+            "parameters": {
+                "chi": chi,
+                "Jx": Jx,
+                "Jy": Jy,
+                "Jz": Jz,
+                "L": L,
+            }
+        }
+        with h5py.File(file_name, 'w') as f:
+            hdf5_io.save_to_hdf5(f, data)
+    pass
 
-    E, psi = eng.run()
+def read_psi(
+    chi=30,
+    Jx=1., 
+    Jy=1., 
+    Jz=0., 
+    L=1, 
+):
+    file_name = full_path(chi, Jx, Jy, Jz, L)
+    with h5py.File(file_name, 'r') as f:
+        data = hdf5_io.load_from_hdf5(f)
+        # or for partial reading:
+        psi = hdf5_io.load_from_hdf5(f, "/psi")
+        return psi
+    
+def read_energy(
+    chi=30,
+    Jx=1., 
+    Jy=1., 
+    Jz=0., 
+    L=1, 
+):
+    file_name = full_path(chi, Jx, Jy, Jz, L)
+    with h5py.File(file_name, 'r') as f:
+        data = hdf5_io.load_from_hdf5(f)
+        # or for partial reading:
+        energy = hdf5_io.load_from_hdf5(f, "/energy")
+        return energy
+    
+def read_parameters(
+    chi=30,
+    Jx=1., 
+    Jy=1., 
+    Jz=0., 
+    L=1, 
+):
+    file_name = full_path(chi, Jx, Jy, Jz, L)
+    with h5py.File(file_name, 'r') as f:
+        data = hdf5_io.load_from_hdf5(f)
+        # or for partial reading:
+        parameters = hdf5_io.load_from_hdf5(f, "/parameters")
+        return parameters
 
-    data['ent_spectrum'].append(psi.entanglement_spectrum(by_charge=True)[0])
-
-    return data
-
-
-def plot_results(data):
-
-    plt.figure()
-    ax = plt.gca()
-    ax.plot(data['ent_spectrum'], marker='o')
-    ax.set_xlabel(r"DMRG Step")
-    ax.set_ylabel(r"$ E $")
-    plt.savefig("KitaevLadderModel.pdf")
-
-data = run()
-# plot_results(data)
-print(data)
+# run_atomic()
