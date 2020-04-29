@@ -15,6 +15,13 @@ from tenpy.tools.params import get_parameter
 from tenpy.algorithms import dmrg
 # from tenpy.networks import SpinHalfSite
 
+# some api for the file operation
+import h5py
+from tenpy.tools import hdf5_io
+import os.path
+# data path
+prefix = 'data/'
+
 __all__ = ['KitaevLadder', 'KitaevLadderModel']
 
 
