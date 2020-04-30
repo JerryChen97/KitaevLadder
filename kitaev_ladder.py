@@ -2,6 +2,7 @@ import numpy as np
 import itertools
 import warnings
 import matplotlib.pyplot as plt
+from random import choice
 
 import tenpy
 from tenpy.networks.site import Site, SpinHalfFermionSite, SpinHalfSite, GroupedSite, SpinSite
@@ -126,7 +127,9 @@ def run_atomic(
     # set the paramters for model initialization
     model_params = dict(conserve=None, Jx=Jx, Jy=Jy, Jz=Jz, L=L, verbose=verbose)
     # providing a product state as the initial state
-    prod_state = ["up", "up"] * (2 * model_params['L'])
+    # prod_state = ["up", "up"] * (2 * model_params['L'])
+    # random generated initial state
+    prod_state = [ choice(["up", "down"]) for i in range(4 * model_params['L'])]
     # initialize the model
     M = KitaevLadderModel(model_params)
     psi = MPS.from_product_state(
@@ -144,9 +147,9 @@ def run_atomic(
 #         'mixer': False,  # setting this to True helps to escape local minima
         'mixer': True,
         'mixer_params': {
-            'amplitude': 1.e-5,
+            'amplitude': 1.e-4,
             'decay': 1.2,
-            'disable_after': 30
+            'disable_after': 50
         },
         'trunc_params': {
             'chi_max': 4,
@@ -154,7 +157,7 @@ def run_atomic(
         },
         'max_E_err': 1.e-6,
         'max_S_err': 1.e-4,
-        'max_sweeps': 1000,
+        'max_sweeps': 10000,
         'verbose': verbose,
     }
     #######################
@@ -296,4 +299,5 @@ def read_parameters(
         parameters = hdf5_io.load_from_hdf5(f, "/parameters")
         return parameters
 
-# run_atomic()
+# energy, psi = run_atomic(chi=100)
+# print(psi.entanglement_entropy())
