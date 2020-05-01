@@ -2,32 +2,32 @@
 """
 
 import numpy as np
+from numpy import pi
 from kitaev_ladder import KitaevLadderModel, run_save, read_psi
 
+from spherical_coordinates import spherical_to_decarte
+
 # region selection
-Jx_list = [1.]
-Jx_list = np.round(Jx_list, decimals=3)
+# first we decide how many points we want 
+N = 20
+# the number of theta points should be N+1 considering the closed end point
+Ntheta = N + 1
+# the number of phi points should be 2N+1
+Nphi = 2 * N + 1
 
-Jy_list = np.arange(-2, 2, .2)
-Jy_list = np.round(Jy_list, decimals=3)
+# use linspace to conveniently create the desired number of points
+# the default linspace provides intervals with both closed boundaries
+theta_list = np.linspace(0, pi/2, Ntheta)
+phi_list = np.linspace(0, pi, Nphi)
 
-Jz_list = np.arange(-2, 2, .2)
-Jz_list = np.round(Jz_list, decimals=3)
-chi_list = [30]
-J_list = [(Jx, Jy, Jz, chi) for Jx in Jx_list for Jy in Jy_list for Jz in Jz_list for chi in chi_list]
-
-# prepare other arguments
-verbose = 0
-
-if __name__ == "__main__":
-    Jx = 1.  
-    chi = 30 
-    def f(Jy, Jz):
-        psi = read_psi(chi=chi, Jx=Jx, Jy=Jy, Jz=Jz)
-        return psi.correlation_length()
-    
-    ff = np.frompyfunc(f, 2, 1)
-    Jy, Jz = np.meshgrid(Jy_list, Jz_list)
-    
-    corr = ff(Jy, Jz)
-    print(corr)
+for theta in theta_list:
+    for phi in phi_list:
+        Jx, Jy, Jz = spherical_to_decarte(r=1.0, theta=theta, phi=phi)
+        if Jx == -0.0:
+            Jx = 0.0
+        if Jy == -0.0:
+            Jy = 0.0
+        if Jz == -0.0:
+            Jz = 0.0
+        run_save(Jx=Jx, Jy=Jy, Jz=Jz, verbose=0)
+        
