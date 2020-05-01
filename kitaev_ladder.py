@@ -114,29 +114,36 @@ def plot_lattice():
     plt.show()
 
 def run_atomic(
+    # model parameters
     chi=30,
     Jx=1., 
     Jy=1., 
     Jz=0., 
     L=1, 
+    # dmrg parameters
+    psi=None,
+    max_E_err=1.e-6,
+    max_S_err=1.e-3,
+    max_sweeps=10000,
+    # control for the verbose output
     verbose=1, 
-    calc_correlation=True,
 ):
 
     #######################
     # set the paramters for model initialization
     model_params = dict(conserve=None, Jx=Jx, Jy=Jy, Jz=Jz, L=L, verbose=verbose)
+    # initialize the model
+    M = KitaevLadderModel(model_params)
     # providing a product state as the initial state
     # prod_state = ["up", "up"] * (2 * model_params['L'])
     # random generated initial state
     prod_state = [ choice(["up", "down"]) for i in range(4 * model_params['L'])]
-    # initialize the model
-    M = KitaevLadderModel(model_params)
-    psi = MPS.from_product_state(
-        M.lat.mps_sites(), 
-        prod_state, 
-        bc=M.lat.bc_MPS,
-    )
+    if psi==None:
+        psi = MPS.from_product_state(
+            M.lat.mps_sites(), 
+            prod_state, 
+            bc=M.lat.bc_MPS,
+        )
     #######################
 
     
@@ -156,7 +163,7 @@ def run_atomic(
             'svd_min': 1.e-10,
         },
         'max_E_err': 1.e-6,
-        'max_S_err': 1.e-4,
+        'max_S_err': 1.e-3,
         'max_sweeps': 10000,
         'verbose': verbose,
     }
@@ -226,12 +233,14 @@ def run_save(
     L=1, 
     verbose=1, 
     calc_correlation=True,
+    psi=None
 ):
     file_name = full_path(chi, Jx, Jy, Jz, L)
     
     # if the file already existed then don't do the computation again
     if os.path.isfile(file_name):
         print("This file already existed")
+        psi = read_psi(chi=chi, Jx=Jx, Jy=Jy, Jz=Jz, L=L)
     else:
         (energy, psi) = run_atomic(
             chi=chi, 
@@ -240,7 +249,8 @@ def run_save(
             Jz=Jz, 
             L=L, 
             verbose=verbose, 
-            calc_correlation=calc_correlation,
+            calc_correlation=calc_correlation, 
+            psi=psi
         )
         data = {
             "psi": psi,
@@ -255,7 +265,7 @@ def run_save(
         }
         with h5py.File(file_name, 'w') as f:
             hdf5_io.save_to_hdf5(f, data)
-    pass
+    return psi
 
 def read_psi(
     chi=30,
