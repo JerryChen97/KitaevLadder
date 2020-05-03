@@ -113,6 +113,8 @@ def plot_lattice():
     # plt.title(links_name)
     plt.show()
 
+""" The fundamental function for running DMRG
+"""
 def run_atomic(
     # model parameters
     chi=30,
@@ -122,6 +124,7 @@ def run_atomic(
     L=1, 
     # dmrg parameters
     psi=None,
+    initial='random',
     max_E_err=1.e-6,
     max_S_err=1.e-3,
     max_sweeps=10000,
@@ -137,8 +140,12 @@ def run_atomic(
     # providing a product state as the initial state
     # prod_state = ["up", "up"] * (2 * model_params['L'])
     # random generated initial state
-    prod_state = [ choice(["up", "down"]) for i in range(4 * model_params['L'])]
     if psi==None:
+        prod_state = [ choice(["up", "down"]) for i in range(4 * model_params['L'])]
+        if initial == 'up':
+            prod_state = ["up" for i in range(len(prod_state))]
+        if initial == 'down':
+            prod_state = ["down" for i in range(len(prod_state))]
         psi = MPS.from_product_state(
             M.lat.mps_sites(), 
             prod_state, 
