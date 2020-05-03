@@ -126,7 +126,7 @@ def run_atomic(
     psi=None,
     initial='random',
     max_E_err=1.e-6,
-    max_S_err=1.e-3,
+    max_S_err=1.e-5,
     max_sweeps=10000,
     # control for the verbose output
     verbose=1, 
@@ -141,7 +141,7 @@ def run_atomic(
     # prod_state = ["up", "up"] * (2 * model_params['L'])
     # random generated initial state
     if psi==None:
-        prod_state = [ choice(["up", "down"]) for i in range(4 * model_params['L'])]
+        prod_state = [ choice(["up", "down"]) for i in range(4 * L)]
         if initial == 'up':
             prod_state = ["up" for i in range(len(prod_state))]
         if initial == 'down':
@@ -169,9 +169,9 @@ def run_atomic(
             'chi_max': 4,
             'svd_min': 1.e-10,
         },
-        'max_E_err': 1.e-6,
-        'max_S_err': 1.e-3,
-        'max_sweeps': 10000,
+        'max_E_err': max_E_err,
+        'max_S_err': max_S_err,
+        'max_sweeps': max_sweeps,
         'verbose': verbose,
     }
     #######################
@@ -233,14 +233,20 @@ def full_path(chi, Jx, Jy, Jz, L):
 """ run the atomic and then save it
 """
 def run_save(
+    # model parameters
     chi=30,
     Jx=1., 
     Jy=1., 
     Jz=0., 
     L=1, 
+    # dmrg parameters
+    psi=None,
+    initial='random',
+    max_E_err=1.e-6,
+    max_S_err=1.e-5,
+    max_sweeps=10000,
+    # control for the verbose output
     verbose=1, 
-    calc_correlation=True,
-    psi=None
 ):
     file_name = full_path(chi, Jx, Jy, Jz, L)
     
@@ -255,9 +261,12 @@ def run_save(
             Jy=Jy, 
             Jz=Jz, 
             L=L, 
+            psi=psi,
+            initial=initial,
+            max_E_err=max_E_err,
+            max_S_err=max_S_err,
+            max_sweeps=max_sweeps,
             verbose=verbose, 
-            calc_correlation=calc_correlation, 
-            psi=psi
         )
         data = {
             "psi": psi,
@@ -268,6 +277,10 @@ def run_save(
                 "Jy": Jy,
                 "Jz": Jz,
                 "L": L,
+                "initial": initial,
+                "max_E_err": max_E_err,
+                "max_S_err": max_S_err,
+                "max_sweeps": max_sweeps,
             }
         }
         with h5py.File(file_name, 'w') as f:
