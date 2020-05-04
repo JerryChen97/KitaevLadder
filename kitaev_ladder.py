@@ -235,7 +235,7 @@ def run_atomic(
     result = dict(
         psi=psi.copy(),
         energy=energy,
-        engine=eng.copy(),
+        eng=eng,
     )
     return result
 
