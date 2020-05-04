@@ -20,8 +20,9 @@ from tenpy.algorithms import dmrg
 import h5py
 from tenpy.tools import hdf5_io
 import os.path
-# data path
-prefix = 'data/'
+
+# functools
+from functools import wraps
 
 __all__ = ['KitaevLadder', 'KitaevLadderModel']
 
@@ -113,9 +114,6 @@ def plot_lattice():
     # plt.title(links_name)
     plt.show()
 
-""" 
-    The fundamental function for running DMRG
-"""
 def run_atomic(
     # model parameters
     chi=30,
@@ -132,6 +130,9 @@ def run_atomic(
     # control for the verbose output
     verbose=1, 
 ):
+    """ 
+        The fundamental function for running DMRG
+    """
 
     #######################
     # set the paramters for model initialization
@@ -242,106 +243,64 @@ def run_atomic(
 def naming(chi, Jx, Jy, Jz, L):
     return "KitaevLadder"+"_chi_"+str(chi)+"_Jx_"+str(Jx)+"_Jy_"+str(Jy)+"_Jz_"+str(Jz)+"_L_"+str(L)
 
-def full_path(chi, Jx, Jy, Jz, L):
-    return prefix+naming(chi, Jx, Jy, Jz, L)+".h5"
-""" run the atomic and then save it
-"""
-def run_save(
-    # model parameters
-    chi=30,
-    Jx=1., 
-    Jy=1., 
-    Jz=0., 
-    L=3, 
-    # dmrg parameters
-    psi=None,
-    initial='random',
-    max_E_err=1.e-6,
-    max_S_err=1.e-5,
-    max_sweeps=10000,
-    # control for the verbose output
-    verbose=1, 
-):
-    file_name = full_path(chi, Jx, Jy, Jz, L)
+def full_path(chi, Jx, Jy, Jz, L, prefix='data/', suffix='.h5'):
+    return prefix+naming(chi, Jx, Jy, Jz, L)+suffix
     
-    # if the file already existed then don't do the computation again
-    if os.path.isfile(file_name):
-        print("This file already existed")
-        psi = read_psi(chi=chi, Jx=Jx, Jy=Jy, Jz=Jz, L=L)
-    else:
-        (energy, psi) = run_atomic(
-            chi=chi, 
-            Jx=Jx, 
-            Jy=Jy, 
-            Jz=Jz, 
-            L=L, 
-            psi=psi,
-            initial=initial,
-            max_E_err=max_E_err,
-            max_S_err=max_S_err,
-            max_sweeps=max_sweeps,
-            verbose=verbose, 
-        )
-        data = {
-            "psi": psi,
-            "energy": energy,
-            "parameters": {
-                "chi": chi,
-                "Jx": Jx,
-                "Jy": Jy,
-                "Jz": Jz,
-                "L": L,
-                "initial": initial,
-                "max_E_err": max_E_err,
-                "max_S_err": max_S_err,
-                "max_sweeps": max_sweeps,
+def save_after_run(run, folder_prefix='data/'):
+    """
+        Save data as .h5 files
+    """
+    @wraps(run)
+    def wrapper(*args, **kwargs):
+        
+        # extract the name
+        chi = kwargs['chi']
+        Jx = kwargs['Jx']
+        Jy = kwargs['Jy']
+        Jz = kwargs['Jz']
+        L = kwargs['L']
+        file_name = full_path(chi, Jx, Jy, Jz, L, prefix=folder_prefix)
+        
+        # if the file already existed then don't do the computation again
+        if os.path.isfile(file_name):
+            print("This file already existed. Pass.")
+            pass
+        else:
+            result = run(*args, **kwargs)
+            energy = result['energy']
+            psi = result['psi']
+            eng = result['eng']
+            data = {
+                "psi": psi,
+                "energy": energy,
+                "eng": eng,
+                "parameters": {
+                    "chi": chi,
+                    "Jx": Jx,
+                    "Jy": Jy,
+                    "Jz": Jz,
+                    "L": L,
+                }
             }
-        }
-        with h5py.File(file_name, 'w') as f:
-            hdf5_io.save_to_hdf5(f, data)
-    return psi
+            with h5py.File(file_name, 'w') as f:
+                hdf5_io.save_to_hdf5(f, data)
+                
+        return result
+    
+    return wrapper
 
-def read_psi(
+def read_data(
     chi=30,
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=1, 
+    L=1,
+    prefix='data/', 
 ):
-    file_name = full_path(chi, Jx, Jy, Jz, L)
+    file_name = full_path(chi, Jx, Jy, Jz, L, prefix='data/', suffix='.h5')
     with h5py.File(file_name, 'r') as f:
         data = hdf5_io.load_from_hdf5(f)
-        # or for partial reading:
-        psi = hdf5_io.load_from_hdf5(f, "/psi")
-        return psi
-    
-def read_energy(
-    chi=30,
-    Jx=1., 
-    Jy=1., 
-    Jz=0., 
-    L=1, 
-):
-    file_name = full_path(chi, Jx, Jy, Jz, L)
-    with h5py.File(file_name, 'r') as f:
-        data = hdf5_io.load_from_hdf5(f)
-        # or for partial reading:
-        energy = hdf5_io.load_from_hdf5(f, "/energy")
-        return energy
-    
-def read_parameters(
-    chi=30,
-    Jx=1., 
-    Jy=1., 
-    Jz=0., 
-    L=1, 
-):
-    file_name = full_path(chi, Jx, Jy, Jz, L)
-    with h5py.File(file_name, 'r') as f:
-        data = hdf5_io.load_from_hdf5(f)
-        # or for partial reading:
-        parameters = hdf5_io.load_from_hdf5(f, "/parameters")
-        return parameters
+        return data
 
 # energy, psi = run_atomic(chi=100)
 # print(psi.entanglement_entropy())
