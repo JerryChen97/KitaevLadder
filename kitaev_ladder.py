@@ -79,7 +79,7 @@ class KitaevLadderModel(CouplingMPOModel):
     def init_lattice(self, model_params):
         L = get_parameter(model_params, 'L', 3, self.name)
         gs = self.init_sites(model_params)
-        model_params.pop("L")
+        # model_params.pop("L")
         lat = KitaevLadder(L, gs)
         return lat
 
@@ -113,7 +113,8 @@ def plot_lattice():
     # plt.title(links_name)
     plt.show()
 
-""" The fundamental function for running DMRG
+""" 
+    The fundamental function for running DMRG
 """
 def run_atomic(
     # model parameters
@@ -121,7 +122,7 @@ def run_atomic(
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=1, 
+    L=3, 
     # dmrg parameters
     psi=None,
     initial='random',
@@ -134,7 +135,14 @@ def run_atomic(
 
     #######################
     # set the paramters for model initialization
-    model_params = dict(conserve=None, Jx=Jx, Jy=Jy, Jz=Jz, L=L, verbose=verbose)
+    model_params = dict(
+        conserve=None, 
+        Jx=Jx, 
+        Jy=Jy, 
+        Jz=Jz, 
+        L=L, 
+        verbose=verbose,
+        )
     # initialize the model
     M = KitaevLadderModel(model_params)
     # providing a product state as the initial state
@@ -143,9 +151,9 @@ def run_atomic(
     if psi==None:
         prod_state = [ choice(["up", "down"]) for i in range(4 * L)]
         if initial == 'up':
-            prod_state = ["up" for i in range(len(prod_state))]
+            prod_state = ["up" for i in range(4 * L)]
         if initial == 'down':
-            prod_state = ["down" for i in range(len(prod_state))]
+            prod_state = ["down" for i in range(4 * L)]
         psi = MPS.from_product_state(
             M.lat.mps_sites(), 
             prod_state, 
@@ -238,7 +246,7 @@ def run_save(
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=1, 
+    L=3, 
     # dmrg parameters
     psi=None,
     initial='random',

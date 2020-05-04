@@ -42,5 +42,13 @@ for theta in theta_list:
         
         print("\n\n\n Calculating the (Jx, Jy, Jz) = (%.3f, %.3f, %.3f) ground state" % (Jx, Jy, Jz))
 
-        psi = run_save(chi=100, Jx=Jx, Jy=Jy, Jz=Jz, L=2, verbose=1, psi=psi)
+        psi = run_save(
+            chi=100, 
+            Jx=Jx, 
+            Jy=Jy, 
+            Jz=Jz, 
+            L=3, 
+            psi=psi,
+            verbose=1, 
+            )
         
