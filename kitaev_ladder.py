@@ -127,6 +127,7 @@ def run_atomic(
     max_E_err=1.e-6,
     max_S_err=1.e-5,
     max_sweeps=200,
+    N_sweeps_check=10,
     # control for the verbose output
     verbose=1, 
 ):
@@ -183,6 +184,7 @@ def run_atomic(
         'max_E_err': max_E_err,
         'max_S_err': max_S_err,
         'max_sweeps': max_sweeps,
+        'N_sweeps_check': N_sweeps_check,
         'verbose': verbose,
     }
     #######################
@@ -269,7 +271,8 @@ def full_path(
     Jy=1., 
     Jz=0., 
     L=3, 
-    prefix='data/', suffix='.h5'):
+    prefix='data/', suffix='.h5',
+    **kwargs):
     return prefix+naming(chi, Jx, Jy, Jz, L)+suffix
     
 def save_after_run(run, folder_prefix='data/'):
