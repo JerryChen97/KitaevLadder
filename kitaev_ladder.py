@@ -240,10 +240,24 @@ def run_atomic(
     )
     return result
 
-def naming(chi, Jx, Jy, Jz, L):
+def naming(
+    # model parameters
+    chi=30,
+    Jx=1., 
+    Jy=1., 
+    Jz=0., 
+    L=3, 
+    ):
     return "KitaevLadder"+"_chi_"+str(chi)+"_Jx_"+str(Jx)+"_Jy_"+str(Jy)+"_Jz_"+str(Jz)+"_L_"+str(L)
 
-def full_path(chi, Jx, Jy, Jz, L, prefix='data/', suffix='.h5'):
+def full_path(
+    # model parameters
+    chi=30,
+    Jx=1., 
+    Jy=1., 
+    Jz=0., 
+    L=3, 
+    prefix='data/', suffix='.h5'):
     return prefix+naming(chi, Jx, Jy, Jz, L)+suffix
     
 def save_after_run(run, folder_prefix='data/'):
@@ -253,13 +267,7 @@ def save_after_run(run, folder_prefix='data/'):
     @wraps(run)
     def wrapper(*args, **kwargs):
         
-        # extract the name
-        chi = kwargs['chi']
-        Jx = kwargs['Jx']
-        Jy = kwargs['Jy']
-        Jz = kwargs['Jz']
-        L = kwargs['L']
-        file_name = full_path(chi, Jx, Jy, Jz, L, prefix=folder_prefix)
+        file_name = full_path(prefix=folder_prefix, **kwargs)
         
         # if the file already existed then don't do the computation again
         if os.path.isfile(file_name):
@@ -274,13 +282,7 @@ def save_after_run(run, folder_prefix='data/'):
                 "psi": psi,
                 "energy": energy,
                 "eng": eng,
-                "parameters": {
-                    "chi": chi,
-                    "Jx": Jx,
-                    "Jy": Jy,
-                    "Jz": Jz,
-                    "L": L,
-                }
+                "parameters": kwargs,
             }
             with h5py.File(file_name, 'w') as f:
                 hdf5_io.save_to_hdf5(f, data)
@@ -289,12 +291,12 @@ def save_after_run(run, folder_prefix='data/'):
     
     return wrapper
 
-def read_data(
+def load_data(
     chi=30,
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=1,
+    L=1, 
     prefix='data/', 
 ):
     file_name = full_path(chi, Jx, Jy, Jz, L, prefix='data/', suffix='.h5')
@@ -302,5 +304,6 @@ def read_data(
         data = hdf5_io.load_from_hdf5(f)
         return data
 
-# energy, psi = run_atomic(chi=100)
-# print(psi.entanglement_entropy())
+
+run_save = save_after_run(run_atomic)
+run_save()
