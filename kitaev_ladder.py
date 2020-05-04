@@ -2,6 +2,7 @@ import numpy as np
 import itertools
 import warnings
 import matplotlib.pyplot as plt
+from random import choice
 
 import tenpy
 from tenpy.networks.site import Site, SpinHalfFermionSite, SpinHalfSite, GroupedSite, SpinSite
@@ -78,7 +79,7 @@ class KitaevLadderModel(CouplingMPOModel):
     def init_lattice(self, model_params):
         L = get_parameter(model_params, 'L', 3, self.name)
         gs = self.init_sites(model_params)
-        model_params.pop("L")
+        # model_params.pop("L")
         lat = KitaevLadder(L, gs)
         return lat
 
@@ -112,28 +113,52 @@ def plot_lattice():
     # plt.title(links_name)
     plt.show()
 
+""" 
+    The fundamental function for running DMRG
+"""
 def run_atomic(
+    # model parameters
     chi=30,
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=1, 
+    L=3, 
+    # dmrg parameters
+    psi=None,
+    initial='random',
+    max_E_err=1.e-6,
+    max_S_err=1.e-5,
+    max_sweeps=10000,
+    # control for the verbose output
     verbose=1, 
-    calc_correlation=True,
 ):
 
     #######################
     # set the paramters for model initialization
-    model_params = dict(conserve=None, Jx=Jx, Jy=Jy, Jz=Jz, L=L, verbose=verbose)
-    # providing a product state as the initial state
-    prod_state = ["up", "up"] * (2 * model_params['L'])
+    model_params = dict(
+        conserve=None, 
+        Jx=Jx, 
+        Jy=Jy, 
+        Jz=Jz, 
+        L=L, 
+        verbose=verbose,
+        )
     # initialize the model
     M = KitaevLadderModel(model_params)
-    psi = MPS.from_product_state(
-        M.lat.mps_sites(), 
-        prod_state, 
-        bc=M.lat.bc_MPS,
-    )
+    # providing a product state as the initial state
+    # prod_state = ["up", "up"] * (2 * model_params['L'])
+    # random generated initial state
+    if psi==None:
+        prod_state = [ choice(["up", "down"]) for i in range(4 * L)]
+        if initial == 'up':
+            prod_state = ["up" for i in range(4 * L)]
+        if initial == 'down':
+            prod_state = ["down" for i in range(4 * L)]
+        psi = MPS.from_product_state(
+            M.lat.mps_sites(), 
+            prod_state, 
+            bc=M.lat.bc_MPS,
+        )
     #######################
 
     
@@ -144,17 +169,17 @@ def run_atomic(
 #         'mixer': False,  # setting this to True helps to escape local minima
         'mixer': True,
         'mixer_params': {
-            'amplitude': 1.e-5,
+            'amplitude': 1.e-4,
             'decay': 1.2,
-            'disable_after': 30
+            'disable_after': 50
         },
         'trunc_params': {
             'chi_max': 4,
             'svd_min': 1.e-10,
         },
-        'max_E_err': 1.e-6,
-        'max_S_err': 1.e-4,
-        'max_sweeps': 1000,
+        'max_E_err': max_E_err,
+        'max_S_err': max_S_err,
+        'max_sweeps': max_sweeps,
         'verbose': verbose,
     }
     #######################
@@ -216,19 +241,27 @@ def full_path(chi, Jx, Jy, Jz, L):
 """ run the atomic and then save it
 """
 def run_save(
+    # model parameters
     chi=30,
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=1, 
+    L=3, 
+    # dmrg parameters
+    psi=None,
+    initial='random',
+    max_E_err=1.e-6,
+    max_S_err=1.e-5,
+    max_sweeps=10000,
+    # control for the verbose output
     verbose=1, 
-    calc_correlation=True,
 ):
     file_name = full_path(chi, Jx, Jy, Jz, L)
     
     # if the file already existed then don't do the computation again
     if os.path.isfile(file_name):
         print("This file already existed")
+        psi = read_psi(chi=chi, Jx=Jx, Jy=Jy, Jz=Jz, L=L)
     else:
         (energy, psi) = run_atomic(
             chi=chi, 
@@ -236,8 +269,12 @@ def run_save(
             Jy=Jy, 
             Jz=Jz, 
             L=L, 
+            psi=psi,
+            initial=initial,
+            max_E_err=max_E_err,
+            max_S_err=max_S_err,
+            max_sweeps=max_sweeps,
             verbose=verbose, 
-            calc_correlation=calc_correlation,
         )
         data = {
             "psi": psi,
@@ -248,11 +285,15 @@ def run_save(
                 "Jy": Jy,
                 "Jz": Jz,
                 "L": L,
+                "initial": initial,
+                "max_E_err": max_E_err,
+                "max_S_err": max_S_err,
+                "max_sweeps": max_sweeps,
             }
         }
         with h5py.File(file_name, 'w') as f:
             hdf5_io.save_to_hdf5(f, data)
-    pass
+    return psi
 
 def read_psi(
     chi=30,
@@ -296,4 +337,5 @@ def read_parameters(
         parameters = hdf5_io.load_from_hdf5(f, "/parameters")
         return parameters
 
-# run_atomic()
+# energy, psi = run_atomic(chi=100)
+# print(psi.entanglement_entropy())
