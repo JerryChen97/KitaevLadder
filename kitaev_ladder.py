@@ -308,8 +308,8 @@ def load_data(
         return data
 
 
-run_save = save_after_run(run_atomic)
-run_save()
-data = load_data()
-print(data["sweeps_stat"])
-print(data["parameters"])
+# run_save = save_after_run(run_atomic)
+# run_save()
+# data = load_data()
+# print(data["sweeps_stat"])
+# print(data["parameters"])
