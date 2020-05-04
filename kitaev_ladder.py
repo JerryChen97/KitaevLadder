@@ -122,11 +122,11 @@ def run_atomic(
     Jz=0., 
     L=3, 
     # dmrg parameters
-    psi=None,
+    initial_psi=None, # input psi
     initial='random',
     max_E_err=1.e-6,
     max_S_err=1.e-5,
-    max_sweeps=10000,
+    max_sweeps=200,
     # control for the verbose output
     verbose=1, 
 ):
@@ -149,7 +149,7 @@ def run_atomic(
     # providing a product state as the initial state
     # prod_state = ["up", "up"] * (2 * model_params['L'])
     # random generated initial state
-    if psi==None:
+    if initial_psi==None:
         prod_state = [ choice(["up", "down"]) for i in range(4 * L)]
         if initial == 'up':
             prod_state = ["up" for i in range(4 * L)]
@@ -160,6 +160,8 @@ def run_atomic(
             prod_state, 
             bc=M.lat.bc_MPS,
         )
+    else:
+        psi = initial_psi.copy()
     #######################
 
     
@@ -192,14 +194,10 @@ def run_atomic(
         print("=" * 80)
         print("Chi = ", chi, '\n')
 
-    # here we create another new engine for every new chi
-    # this is quite unusual but since some strange issues
-    # we can only treat like this
     eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
     eng.reset_stats()
     eng.trunc_params['chi_max'] = chi
     info = eng.run()
-#         print("INFO: \n", info)
 
     if verbose:
         print("Before the canonicalization:")
@@ -236,7 +234,21 @@ def run_atomic(
     result = dict(
         psi=psi.copy(),
         energy=energy,
-        eng=eng,
+        sweeps_stat=eng.sweep_stats.copy(),
+        parameters=dict(
+            # model parameters
+            chi=chi,
+            Jx=Jx, 
+            Jy=Jy, 
+            Jz=Jz, 
+            L=L, 
+            # dmrg parameters
+            initial_psi=initial_psi,
+            initial=initial,
+            max_E_err=max_E_err,
+            max_S_err=max_S_err,
+            max_sweeps=max_sweeps,
+        )
     )
     return result
 
@@ -272,22 +284,13 @@ def save_after_run(run, folder_prefix='data/'):
         # if the file already existed then don't do the computation again
         if os.path.isfile(file_name):
             print("This file already existed. Pass.")
-            pass
+            return 0
         else:
             result = run(*args, **kwargs)
-            energy = result['energy']
-            psi = result['psi']
-            eng = result['eng']
-            data = {
-                "psi": psi,
-                "energy": energy,
-                "eng": eng,
-                "parameters": kwargs,
-            }
             with h5py.File(file_name, 'w') as f:
-                hdf5_io.save_to_hdf5(f, data)
+                hdf5_io.save_to_hdf5(f, result)
                 
-        return result
+            return result
     
     return wrapper
 
@@ -296,7 +299,7 @@ def load_data(
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=1, 
+    L=3, 
     prefix='data/', 
 ):
     file_name = full_path(chi, Jx, Jy, Jz, L, prefix='data/', suffix='.h5')
@@ -307,3 +310,6 @@ def load_data(
 
 run_save = save_after_run(run_atomic)
 run_save()
+data = load_data()
+print(data["sweeps_stat"])
+print(data["parameters"])
