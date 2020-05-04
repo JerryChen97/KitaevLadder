@@ -231,7 +231,13 @@ def run_atomic(
         print("="*30 + " END " + "="*30)
         print("=" * 80)
         
-    return (energy, psi.copy())
+    # the wave function, the ground-state energy, and the DMRG engine are all that we need
+    result = dict(
+        psi=psi.copy(),
+        energy=energy,
+        engine=eng.copy(),
+    )
+    return result
 
 def naming(chi, Jx, Jy, Jz, L):
     return "KitaevLadder"+"_chi_"+str(chi)+"_Jx_"+str(Jx)+"_Jy_"+str(Jy)+"_Jz_"+str(Jz)+"_L_"+str(L)
