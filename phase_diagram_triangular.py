@@ -5,28 +5,32 @@
 import numpy as np
 from numpy import pi
 
+# matplot
+import matplotlib.pyplot as plt
+
 # model and dmrg
 from kitaev_ladder import KitaevLadderModel, save_after_run, load_data, run_atomic
 
-# spherical coordinates
-from spherical_coordinates import spherical_to_decarte
+# triangular coordinates
+from triangular_coordinates import triangular_to_decarte, decimals
 
 # path toolkits
 from pathlib import Path
 
 # region selection
-# first we decide how many points we want 
-N = 20
-Ntheta = N + 1
-Nphi = N + 1
+# Here we use the step
+a_step = 0.1
+b_step = 0.1
 
-# use linspace to conveniently create the desired number of points
-# the default linspace provides intervals with both closed boundaries
-theta_list = np.linspace(0, pi/2, Ntheta)
-phi_list = np.linspace(0, pi/2, Nphi)
+point_list = []
+
+for a in np.arange(0, 1+a_step, a_step):
+    for b in np.arange(a-1, 1-a+b_step, b_step):
+        point_list.append(triangular_to_decarte(1, a, b))
+
 
 chi = 100
-L = 3
+L = 2
 N_sweeps_check=1
 max_sweeps=20
 verbose=0
@@ -35,33 +39,33 @@ prefix = f'data_L_{L}/'
 Path(prefix).mkdir(parents=True, exist_ok=True)
 run_save = save_after_run(run_atomic, folder_prefix=prefix)
 
-def get_J(theta, phi):
-    Jx, Jy, Jz = spherical_to_decarte(r=1.0, theta=theta, phi=phi)
-    if Jx == -0.0:
-        Jx = 0.0
-    if Jy == -0.0:
-        Jy = 0.0
-    if Jz == -0.0:
-        Jz = 0.0
-    # if Jx = Jy then slightly differ them to avoid the symmetric state
-    if Jx == Jy:
-        Jx += 0.001
-        Jy -= 0.001
-    return (Jx, Jy, Jz)
+# def get_J(theta, phi):
+#     Jx, Jy, Jz = triangular_to_decarte(r=1.0, theta=theta, phi=phi)
+#     if Jx == -0.0:
+#         Jx = 0.0
+#     if Jy == -0.0:
+#         Jy = 0.0
+#     if Jz == -0.0:
+#         Jz = 0.0
+#     # if Jx = Jy then slightly differ them to avoid the symmetric state
+#     if Jx == Jy:
+#         Jx += 0.001
+#         Jy -= 0.001
+#     return (Jx, Jy, Jz)
 
-# store those points reaching the max sweeps
+# # store those points reaching the max sweeps
 unclear_points = []
 
 # run the DMRG 
-for theta in theta_list:
+for a in np.arange(0, 1+a_step, a_step):
     psi = None
-    for phi in phi_list:
+    for b in np.arange(a-1, 1-a+b_step, b_step):
         if psi is not None:
             initial_psi = psi.copy()
         else:
             initial_psi = None
 
-        Jx, Jy, Jz = get_J(theta, phi)
+        Jx, Jy, Jz = triangular_to_decarte(1, a, b)
         J = (Jx, Jy, Jz)
         
         print("\n\n\n Calculating the (Jx, Jy, Jz) = (%.3f, %.3f, %.3f) ground state" % (Jx, Jy, Jz))
