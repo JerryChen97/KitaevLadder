@@ -24,6 +24,9 @@ import os.path
 # functools
 from functools import wraps
 
+# path
+from pathlib import Path
+
 __all__ = ['KitaevLadder', 'KitaevLadderModel']
 
 
@@ -125,7 +128,7 @@ def run_atomic(
     initial_psi=None, # input psi
     initial='random',
     max_E_err=1.e-6,
-    max_S_err=1.e-5,
+    max_S_err=1.e-4,
     max_sweeps=200,
     N_sweeps_check=10,
     # control for the verbose output
@@ -305,7 +308,9 @@ def load_data(
     L=3, 
     prefix='data/', 
 ):
-    file_name = full_path(chi, Jx, Jy, Jz, L, prefix='data/', suffix='.h5')
+    file_name = full_path(chi, Jx, Jy, Jz, L, prefix=prefix, suffix='.h5')
+    if not Path(file_name).exists():
+        return -1
     with h5py.File(file_name, 'r') as f:
         data = hdf5_io.load_from_hdf5(f)
         return data

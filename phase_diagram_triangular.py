@@ -19,39 +19,25 @@ from pathlib import Path
 
 # region selection
 # Here we use the step
-a_step = 0.1
-b_step = 0.1
+a_step = 0.05
+b_step = 0.05
 
 point_list = []
 
 for a in np.arange(0, 1+a_step, a_step):
-    for b in np.arange(a-1, 1-a+b_step, b_step):
+    for b in np.arange(0, 1-a+b_step, b_step):
         point_list.append(triangular_to_decarte(1, a, b))
 
 
 chi = 100
-L = 2
+L = 3
 N_sweeps_check=1
-max_sweeps=20
+max_sweeps=10
 verbose=0
 # folder name
 prefix = f'data_L_{L}/'
 Path(prefix).mkdir(parents=True, exist_ok=True)
 run_save = save_after_run(run_atomic, folder_prefix=prefix)
-
-# def get_J(theta, phi):
-#     Jx, Jy, Jz = triangular_to_decarte(r=1.0, theta=theta, phi=phi)
-#     if Jx == -0.0:
-#         Jx = 0.0
-#     if Jy == -0.0:
-#         Jy = 0.0
-#     if Jz == -0.0:
-#         Jz = 0.0
-#     # if Jx = Jy then slightly differ them to avoid the symmetric state
-#     if Jx == Jy:
-#         Jx += 0.001
-#         Jy -= 0.001
-#     return (Jx, Jy, Jz)
 
 # # store those points reaching the max sweeps
 unclear_points = []
@@ -59,7 +45,7 @@ unclear_points = []
 # run the DMRG 
 for a in np.arange(0, 1+a_step, a_step):
     psi = None
-    for b in np.arange(a-1, 1-a+b_step, b_step):
+    for b in np.arange(0, 1-a+b_step, b_step):
         if psi is not None:
             initial_psi = psi.copy()
         else:
@@ -88,6 +74,8 @@ for a in np.arange(0, 1+a_step, a_step):
             max_sweeps = result['parameters']['max_sweeps']
             if max_sweeps == last_sweep:
                 unclear_points.append(J)
+                initial_psi = None 
+                print("Maximum sweeps reached!")
             else:
                 initial_psi = result['psi']
 
