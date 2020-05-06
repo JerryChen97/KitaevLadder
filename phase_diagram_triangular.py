@@ -31,9 +31,11 @@ for a in np.arange(0, 1+a_step, a_step):
 
 chi = 100
 L = 3
-N_sweeps_check=1
-max_sweeps=10
-verbose=0
+max_E_err=1.e-6
+max_S_err=1.e-4
+N_sweeps_check=5
+max_sweeps=100
+verbose=1
 # folder name
 prefix = f'data_L_{L}/'
 Path(prefix).mkdir(parents=True, exist_ok=True)
@@ -63,9 +65,11 @@ for a in np.arange(0, 1+a_step, a_step):
             Jz=Jz, 
             L=L,
             initial_psi=initial_psi,
+            max_E_err=max_E_err,
+            max_S_err=max_S_err,
             N_sweeps_check=N_sweeps_check,
             max_sweeps=max_sweeps,
-            verbose=0, 
+            verbose=verbose, 
             )
 
         if result != 0:
@@ -74,10 +78,9 @@ for a in np.arange(0, 1+a_step, a_step):
             max_sweeps = result['parameters']['max_sweeps']
             if max_sweeps == last_sweep:
                 unclear_points.append(J)
-                initial_psi = None 
                 print("Maximum sweeps reached!")
-            else:
-                initial_psi = result['psi']
+                
+            initial_psi = result['psi']
 
         
 
