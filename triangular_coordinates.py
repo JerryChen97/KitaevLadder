@@ -13,5 +13,14 @@ def triangular_to_decarte(r, a, b):
     x = 0.5 - 0.5 * a + 0.5 * b
     y = 0.5 - 0.5 * a - 0.5 * b
     z = a
+    x = np.round(x*r, decimals=decimals)
+    if x == -0.0:
+        x = 0.0
+    y = np.round(y*r, decimals=decimals)
+    if y == -0.0:
+        y = 0.0
+    z = np.round(z*r, decimals=decimals)
+    if z == -0.0:
+        z = 0.0
 
-    return np.round((x * r, y * r, z * r), decimals=decimals)
+    return (x, y, z)
