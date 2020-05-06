@@ -19,8 +19,8 @@ from pathlib import Path
 
 # region selection
 # Here we use the step
-a_step = 0.05
-b_step = 0.05
+a_step = 0.02
+b_step = 0.02
 
 point_list = []
 
@@ -78,11 +78,47 @@ for a in np.arange(0, 1+a_step, a_step):
         result = load_data(chi=chi, Jx=Jx, Jy=Jy, Jz=Jz, L=L, prefix=prefix)
         initial_psi = result['psi']
 
+# Then spawn all the other points along the same vertical line, starting from the point we just computed.
 for a in np.arange(0, 1+a_step, a_step):
     Jx0, Jy0, Jz0 = triangular_to_decarte(1, a, 0)
     base_result = load_data(chi=chi, Jx=Jx0, Jy=Jy0, Jz=Jz0, L=L, prefix=prefix)
     initial_psi = base_result['psi']
     for b in np.arange(b_step, 1-a+b_step, b_step):
+
+        Jx, Jy, Jz = triangular_to_decarte(1, a, b)
+        J = (Jx, Jy, Jz)
+        
+        print("\n\n\n Calculating the (Jx, Jy, Jz) = (%.3f, %.3f, %.3f) ground state" % (Jx, Jy, Jz))
+
+        result = run_save(
+            chi=chi, 
+            Jx=Jx, 
+            Jy=Jy, 
+            Jz=Jz, 
+            L=L,
+            initial_psi=initial_psi,
+            max_E_err=max_E_err,
+            max_S_err=max_S_err,
+            N_sweeps_check=N_sweeps_check,
+            max_sweeps=max_sweeps,
+            verbose=verbose, 
+            )
+
+        if result != 0:
+            sweeps_stat = result['sweeps_stat']
+            last_sweep = len(sweeps_stat['sweep']) * N_sweeps_check
+            max_sweeps = result['parameters']['max_sweeps']
+            if max_sweeps == last_sweep:
+                unclear_points.append(J)
+                print("Maximum sweeps reached!")
+                
+            initial_psi = result['psi']
+
+for a in np.arange(0, 1+a_step, a_step):
+    Jx0, Jy0, Jz0 = triangular_to_decarte(1, a, 0)
+    base_result = load_data(chi=chi, Jx=Jx0, Jy=Jy0, Jz=Jz0, L=L, prefix=prefix)
+    initial_psi = base_result['psi']
+    for b in np.arange(-b_step, -1+a-b_step, -b_step):
 
         Jx, Jy, Jz = triangular_to_decarte(1, a, b)
         J = (Jx, Jy, Jz)
