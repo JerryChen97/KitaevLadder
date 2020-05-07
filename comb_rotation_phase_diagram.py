@@ -12,17 +12,11 @@ import matplotlib.pyplot as plt
 from kitaev_ladder import KitaevLadderModel, save_after_run, load_data, run_atomic
 
 # triangular coordinates
-from rotation import get_xy, get_z_plus, decimals, get_xyz
+from rotation import get_z_plus, decimals, get_xyz, clean_minus_zero, avoid_special_points
 
 # path toolkits
 from pathlib import Path
 
-def clean_minus_zero(x):
-    x = np.round(x, decimals=decimals)
-    if x == -0.0:
-        x = 0.0
-        pass
-    return x 
 
 # region selection
 # Here we use the step
@@ -41,7 +35,7 @@ b_list_2 = [clean_minus_zero(b) for b in b_list_2]
 
 # DMRG Setting
 chi = 100
-L = 3
+L = 2
 max_E_err=1.e-6
 max_S_err=1.e-4
 N_sweeps_check=5
@@ -63,8 +57,7 @@ initial_psi = None
 for a in a_list_1:
     a = clean_minus_zero(a)
     b = 0
-    Jx, Jy= get_xy(a, b)
-    Jz = get_z_plus(Jx, Jy)
+    Jx, Jy, Jz = get_xyz(a, b)
     J = (Jx, Jy, Jz)
     print("\n\n\n Calculating the (Jx, Jy, Jz) = (%.3f, %.3f, %.3f) ground state" % (Jx, Jy, Jz))
     result = run_save(
@@ -174,8 +167,7 @@ initial_psi = None
 for a in a_list_2:
     a = clean_minus_zero(a)
     b = 0
-    Jx, Jy= get_xy(a, b)
-    Jz = get_z_plus(Jx, Jy)
+    Jx, Jy, Jz = get_xyz(a, b)
     J = (Jx, Jy, Jz)
     print("\n\n\n Calculating the (Jx, Jy, Jz) = (%.3f, %.3f, %.3f) ground state" % (Jx, Jy, Jz))
     result = run_save(
@@ -285,8 +277,7 @@ initial_psi = None
 for b in b_list_1:
     b = clean_minus_zero(b)
     a = 0
-    Jx, Jy= get_xy(a, b)
-    Jz = get_z_plus(Jx, Jy)
+    Jx, Jy, Jz = get_xyz(a, b)
     J = (Jx, Jy, Jz)
     print("\n\n\n Calculating the (Jx, Jy, Jz) = (%.3f, %.3f, %.3f) ground state" % (Jx, Jy, Jz))
     result = run_save(
@@ -396,8 +387,7 @@ initial_psi = None
 for b in b_list_2:
     b = clean_minus_zero(b)
     a = 0
-    Jx, Jy= get_xy(a, b)
-    Jz = get_z_plus(Jx, Jy)
+    Jx, Jy, Jz = get_xyz(a, b)
     J = (Jx, Jy, Jz)
     print("\n\n\n Calculating the (Jx, Jy, Jz) = (%.3f, %.3f, %.3f) ground state" % (Jx, Jy, Jz))
     result = run_save(

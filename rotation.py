@@ -2,6 +2,15 @@
 
 import numpy as np
 
+special_shift = 0.001
+def avoid_special_points(Jx, Jy, Jz):
+    if Jx == 0:
+        Jx += special_shift
+    if Jy == 0:
+        Jy += special_shift
+    if Jz == 0:
+        Jz += special_shift
+    return (Jx, Jy, Jz)
 
 def clean_minus_zero(x):
     x = np.round(x, decimals=decimals)
@@ -33,7 +42,10 @@ def get_z_plus(x, y):
 def get_z_minus(x, y):
     return -get_z_plus(x, y)
 
-def get_xyz(a, b):
+def get_xyz(a, b, biased=True):
     x, y = get_xy(a, b)
     z = get_z_plus(x, y)
+    if biased:
+        x, y, z = avoid_special_points(x, y, z)
     return (x, y, z)
+
