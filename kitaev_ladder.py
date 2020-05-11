@@ -20,8 +20,12 @@ from tenpy.algorithms import dmrg
 import h5py
 from tenpy.tools import hdf5_io
 import os.path
-# data path
-prefix = 'data/'
+
+# functools
+from functools import wraps
+
+# path
+from pathlib import Path
 
 __all__ = ['KitaevLadder', 'KitaevLadderModel']
 
@@ -113,9 +117,6 @@ def plot_lattice():
     # plt.title(links_name)
     plt.show()
 
-""" 
-    The fundamental function for running DMRG
-"""
 def run_atomic(
     # model parameters
     chi=30,
@@ -124,14 +125,18 @@ def run_atomic(
     Jz=0., 
     L=3, 
     # dmrg parameters
-    psi=None,
+    initial_psi=None, # input psi
     initial='random',
     max_E_err=1.e-6,
-    max_S_err=1.e-5,
-    max_sweeps=10000,
+    max_S_err=1.e-4,
+    max_sweeps=200,
+    N_sweeps_check=10,
     # control for the verbose output
     verbose=1, 
 ):
+    """ 
+        The fundamental function for running DMRG
+    """
 
     #######################
     # set the paramters for model initialization
@@ -148,7 +153,7 @@ def run_atomic(
     # providing a product state as the initial state
     # prod_state = ["up", "up"] * (2 * model_params['L'])
     # random generated initial state
-    if psi==None:
+    if initial_psi==None:
         prod_state = [ choice(["up", "down"]) for i in range(4 * L)]
         if initial == 'up':
             prod_state = ["up" for i in range(4 * L)]
@@ -159,6 +164,8 @@ def run_atomic(
             prod_state, 
             bc=M.lat.bc_MPS,
         )
+    else:
+        psi = initial_psi.copy()
     #######################
 
     
@@ -180,6 +187,7 @@ def run_atomic(
         'max_E_err': max_E_err,
         'max_S_err': max_S_err,
         'max_sweeps': max_sweeps,
+        'N_sweeps_check': N_sweeps_check,
         'verbose': verbose,
     }
     #######################
@@ -191,14 +199,10 @@ def run_atomic(
         print("=" * 80)
         print("Chi = ", chi, '\n')
 
-    # here we create another new engine for every new chi
-    # this is quite unusual but since some strange issues
-    # we can only treat like this
     eng = dmrg.TwoSiteDMRGEngine(psi, M, dmrg_params)
     eng.reset_stats()
     eng.trunc_params['chi_max'] = chi
     info = eng.run()
-#         print("INFO: \n", info)
 
     if verbose:
         print("Before the canonicalization:")
@@ -231,111 +235,89 @@ def run_atomic(
         print("="*30 + " END " + "="*30)
         print("=" * 80)
         
-    return (energy, psi.copy())
+    # the wave function, the ground-state energy, and the DMRG engine are all that we need
+    result = dict(
+        psi=psi.copy(),
+        energy=energy,
+        sweeps_stat=eng.sweep_stats.copy(),
+        parameters=dict(
+            # model parameters
+            chi=chi,
+            Jx=Jx, 
+            Jy=Jy, 
+            Jz=Jz, 
+            L=L, 
+            # dmrg parameters
+            initial_psi=initial_psi,
+            initial=initial,
+            max_E_err=max_E_err,
+            max_S_err=max_S_err,
+            max_sweeps=max_sweeps,
+        )
+    )
+    return result
 
-def naming(chi, Jx, Jy, Jz, L):
-    return "KitaevLadder"+"_chi_"+str(chi)+"_Jx_"+str(Jx)+"_Jy_"+str(Jy)+"_Jz_"+str(Jz)+"_L_"+str(L)
-
-def full_path(chi, Jx, Jy, Jz, L):
-    return prefix+naming(chi, Jx, Jy, Jz, L)+".h5"
-""" run the atomic and then save it
-"""
-def run_save(
+def naming(
     # model parameters
     chi=30,
     Jx=1., 
     Jy=1., 
     Jz=0., 
     L=3, 
-    # dmrg parameters
-    psi=None,
-    initial='random',
-    max_E_err=1.e-6,
-    max_S_err=1.e-5,
-    max_sweeps=10000,
-    # control for the verbose output
-    verbose=1, 
-):
-    file_name = full_path(chi, Jx, Jy, Jz, L)
-    
-    # if the file already existed then don't do the computation again
-    if os.path.isfile(file_name):
-        print("This file already existed")
-        psi = read_psi(chi=chi, Jx=Jx, Jy=Jy, Jz=Jz, L=L)
-    else:
-        (energy, psi) = run_atomic(
-            chi=chi, 
-            Jx=Jx, 
-            Jy=Jy, 
-            Jz=Jz, 
-            L=L, 
-            psi=psi,
-            initial=initial,
-            max_E_err=max_E_err,
-            max_S_err=max_S_err,
-            max_sweeps=max_sweeps,
-            verbose=verbose, 
-        )
-        data = {
-            "psi": psi,
-            "energy": energy,
-            "parameters": {
-                "chi": chi,
-                "Jx": Jx,
-                "Jy": Jy,
-                "Jz": Jz,
-                "L": L,
-                "initial": initial,
-                "max_E_err": max_E_err,
-                "max_S_err": max_S_err,
-                "max_sweeps": max_sweeps,
-            }
-        }
-        with h5py.File(file_name, 'w') as f:
-            hdf5_io.save_to_hdf5(f, data)
-    return psi
+    ):
+    return "KitaevLadder"+"_chi_"+str(chi)+"_Jx_"+str(Jx)+"_Jy_"+str(Jy)+"_Jz_"+str(Jz)+"_L_"+str(L)
 
-def read_psi(
+def full_path(
+    # model parameters
     chi=30,
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=1, 
-):
-    file_name = full_path(chi, Jx, Jy, Jz, L)
-    with h5py.File(file_name, 'r') as f:
-        data = hdf5_io.load_from_hdf5(f)
-        # or for partial reading:
-        psi = hdf5_io.load_from_hdf5(f, "/psi")
-        return psi
+    L=3, 
+    prefix='data/', suffix='.h5',
+    **kwargs):
+    return prefix+naming(chi, Jx, Jy, Jz, L)+suffix
     
-def read_energy(
-    chi=30,
-    Jx=1., 
-    Jy=1., 
-    Jz=0., 
-    L=1, 
-):
-    file_name = full_path(chi, Jx, Jy, Jz, L)
-    with h5py.File(file_name, 'r') as f:
-        data = hdf5_io.load_from_hdf5(f)
-        # or for partial reading:
-        energy = hdf5_io.load_from_hdf5(f, "/energy")
-        return energy
+def save_after_run(run, folder_prefix='data/'):
+    """
+        Save data as .h5 files
+    """
+    @wraps(run)
+    def wrapper(*args, **kwargs):
+        
+        file_name = full_path(prefix=folder_prefix, **kwargs)
+        
+        # if the file already existed then don't do the computation again
+        if os.path.isfile(file_name):
+            print("This file already existed. Pass.")
+            return 0
+        else:
+            result = run(*args, **kwargs)
+            with h5py.File(file_name, 'w') as f:
+                hdf5_io.save_to_hdf5(f, result)
+                
+            return result
     
-def read_parameters(
-    chi=30,
-    Jx=1., 
-    Jy=1., 
-    Jz=0., 
-    L=1, 
-):
-    file_name = full_path(chi, Jx, Jy, Jz, L)
-    with h5py.File(file_name, 'r') as f:
-        data = hdf5_io.load_from_hdf5(f)
-        # or for partial reading:
-        parameters = hdf5_io.load_from_hdf5(f, "/parameters")
-        return parameters
+    return wrapper
 
-# energy, psi = run_atomic(chi=100)
-# print(psi.entanglement_entropy())
+def load_data(
+    chi=30,
+    Jx=1., 
+    Jy=1., 
+    Jz=0., 
+    L=3, 
+    prefix='data/', 
+):
+    file_name = full_path(chi, Jx, Jy, Jz, L, prefix=prefix, suffix='.h5')
+    if not Path(file_name).exists():
+        return -1
+    with h5py.File(file_name, 'r') as f:
+        data = hdf5_io.load_from_hdf5(f)
+        return data
+
+
+# run_save = save_after_run(run_atomic)
+# run_save()
+# data = load_data()
+# print(data["sweeps_stat"])
+# print(data["parameters"])

@@ -1,2 +1,5 @@
 .vscode/
+__pycache__/
+.ipynb_checkpoints/
 Untitled.ipynb
+__pycache__/kitaev_ladder.cpython-37.pyc
