@@ -131,6 +131,7 @@ def run_atomic(
     max_S_err=1.e-4,
     max_sweeps=200,
     N_sweeps_check=10,
+    canonicalized=True,
     # control for the verbose output
     verbose=1, 
 ):
@@ -204,21 +205,22 @@ def run_atomic(
     eng.trunc_params['chi_max'] = chi
     info = eng.run()
 
-    if verbose:
-        print("Before the canonicalization:")
-        print("Bond dim = ", psi.chi)
+    if canonicalized:
+        psi.canonical_form()
+        if verbose:
+            print("Before the canonicalization:")
+            print("Bond dim = ", psi.chi)
 
-        print("Canonicalizing...")
-        psi_before = psi.copy()
+            print("Canonicalizing...")
+            psi_before = psi.copy()
 
-    psi.canonical_form()
 
-    if verbose:
-        ov = psi.overlap(psi_before, charge_sector=0)
-        print("The norm is: ",psi.norm)
-        print("The overlap is: ", ov)
-        print("After the canonicalization:")
-        print("Bond dim = ", psi.chi)
+        if verbose:
+            ov = psi.overlap(psi_before, charge_sector=0)
+            print("The norm is: ",psi.norm)
+            print("The overlap is: ", ov)
+            print("After the canonicalization:")
+            print("Bond dim = ", psi.chi)
 
         print("Computing properties")
 
