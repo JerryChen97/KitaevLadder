@@ -3,4 +3,5 @@ Untitled.ipynb
 data/
 snake/
 newdata/
-
+__pycache__/
+.ipynb_checkpoints/
