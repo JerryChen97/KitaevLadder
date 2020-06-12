@@ -48,7 +48,7 @@ class KitaevLadderSnakeCompact(Lattice):
     dim = 1
 
     def __init__(self, L, sites, **kwargs):
-        sites = _parse_sites(sites, 2)
+        sites = _parse_sites(sites, 2) # 2 instead of 4
         basis = np.array([[2., 0.]])
         pos = np.array([[0., 0.], [1., 0.]])
         kwargs.setdefault('basis', basis)
@@ -84,8 +84,7 @@ class KitaevLadderSnakeCompactModel(CouplingMPOModel):
         return [fs, fs]
 
     def init_lattice(self, model_params):
-        # L = get_parameter(model_params, 'L', 3, self.name)
-        L = model_params.get('L', 3)
+        L = model_params.get('L', 4) # 2 is the least possible number for L to be a Kitaev ladder we want, and 4 is more secured (I hope so)
 
         gs = self.init_sites(model_params)
         model_params.pop("L")
@@ -140,7 +139,7 @@ def plot_lattice():
     ax.axis('off')
     # plt.title(links_name)
     plt.show()
-    
+
 def run_atomic(
     # model parameters
     chi=30,
@@ -293,7 +292,7 @@ def naming(
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=3, 
+    L=4, 
     ):
     return "KitaevLadder"+"_chi_"+str(chi)+"_Jx_"+str(Jx)+"_Jy_"+str(Jy)+"_Jz_"+str(Jz)+"_L_"+str(L)
 
@@ -303,7 +302,7 @@ def full_path(
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=3, 
+    L=4, 
     prefix='data/', suffix='.h5',
     **kwargs):
     return prefix+naming(chi, Jx, Jy, Jz, L)+suffix
@@ -336,7 +335,7 @@ def load_data(
     Jx=1., 
     Jy=1., 
     Jz=0., 
-    L=3, 
+    L=4, 
     prefix='data/', 
 ):
     file_name = full_path(chi, Jx, Jy, Jz, L, prefix=prefix, suffix='.h5')
@@ -351,7 +350,7 @@ def finite_scaling(
     Jx = 0.5,
     Jy = 0.5,
     Jz = 0,
-    L = 3,
+    L = 4,
 
     # next there are some DMRG params
     # tolerance for entropy calc error, should be input
@@ -369,6 +368,8 @@ def finite_scaling(
     
     # should we load the existing files and also save the results into files
     save_and_load = False,
+
+    prefix = 'snake/',
     
     # should we do plotting after calculation
     plot = False,
@@ -379,7 +380,7 @@ def finite_scaling(
     
     if save_and_load:
         # folder name
-        prefix = f'data_L_{L}_comb/'
+        # prefix = f'data_L_{L}_comb/'
         # if there is no such folder, create another one; if exists, doesn't matter
         Path(prefix).mkdir(parents=True, exist_ok=True)
         run_save = save_after_run(run_atomic, folder_prefix=prefix)
@@ -451,9 +452,9 @@ def finite_scaling(
         plt.legend()
         title_name = f'Finite Scaling at J = ({Jx}, {Jy}, {Jz}), L={L}'
         plt.title(title_name)
+        plt.savefig(title_name + '.png')
 
         plt.show()
-        plt.savefig(title_name + '.png')
         pass
     return S_list, xi_list
 
@@ -461,7 +462,7 @@ def fDMRG_KL(
     Jx=1., 
     Jy=1., 
     Jz=1., 
-    L=3, 
+    L=4, 
     chi=100, 
     verbose=True, 
     order='default', 
