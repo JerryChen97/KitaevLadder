@@ -52,8 +52,6 @@ class KitaevLadder(Lattice):
         pos = np.array([[0., 0.], [0., 1.], [1., 0.], [1., 1.]])
         kwargs.setdefault('basis', basis)
         kwargs.setdefault('positions', pos)
-        kwargs.setdefault('bc', 'periodic')
-        kwargs.setdefault('bc_MPS', 'infinite')
         
         NNz = [(0, 1, np.array([0])), (2, 3, np.array([0]))]
         NNx = [(1, 3, np.array([0])), (2, 0, np.array([1]))]
@@ -67,6 +65,8 @@ class KitaevLadder(Lattice):
         kwargs['pairs'].setdefault('nearest_neighbors_z', NNz)
         kwargs['pairs'].setdefault('next_nearest_neighbors_a', nNNa)
         kwargs['pairs'].setdefault('next_nearest_neighbors_b', nNNb)
+
+        kwargs.setdefault('bc', 'open')
         
         Lattice.__init__(self, [L], sites, **kwargs)
         
@@ -86,8 +86,25 @@ class KitaevLadderModel(CouplingMPOModel):
         L = model_params.get('L', 3)
 
         gs = self.init_sites(model_params)
-        # model_params.pop("L")
-        lat = KitaevLadder(L, gs)
+        model_params.pop("L")
+
+
+        order = model_params.get('order', 'default')
+        bc = model_params.get('bc', 'open')
+        bc_MPS=model_params.get('bc_MPS', 'finite')
+        lattice_params = dict(
+            order=order,
+            bc=bc,
+            bc_MPS=bc_MPS,
+            basis=None,
+            positions=None,
+            nearest_neighbors=None,
+            next_nearest_neighbors=None,
+            next_next_nearest_neighbors=None,
+            pairs={},
+        )
+
+        lat = KitaevLadder(L, gs, **lattice_params)
         return lat
 
     def init_terms(self, model_params):
@@ -99,11 +116,11 @@ class KitaevLadderModel(CouplingMPOModel):
         Jz = model_params.get('Jz', 1.)
 
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_z']:
-            self.add_coupling(-Jz, u1, 'Sx', u2, 'Sx', dx)
+            self.add_coupling(Jz, u1, 'Sz', u2, 'Sz', dx)
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_x']:
-            self.add_coupling(-Jx, u1, 'Sz', u2, 'Sz', dx)
+            self.add_coupling(Jx, u1, 'Sx', u2, 'Sx', dx)
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_y']:
-            self.add_coupling(-Jy, u1, 'Sy', u2, 'Sy', dx)
+            self.add_coupling(Jy, u1, 'Sy', u2, 'Sy', dx)
          
         
 def plot_lattice():
@@ -130,6 +147,8 @@ def run_atomic(
     Jy=1., 
     Jz=0., 
     L=3, 
+    bc='periodic',
+    bc_MPS='infinite',
     # dmrg parameters
     initial_psi=None, # input psi
     initial='random',
@@ -154,6 +173,8 @@ def run_atomic(
         Jz=Jz, 
         L=L, 
         verbose=verbose,
+        bc=bc,
+        bc_MPS=bc_MPS,
         )
     # initialize the model
     M = KitaevLadderModel(model_params)
@@ -292,7 +313,8 @@ def save_after_run(run, folder_prefix='data/'):
     """
     @wraps(run)
     def wrapper(*args, **kwargs):
-        
+        # if there is no such folder, create another one; if exists, doesn't matter
+        Path(folder_prefix).mkdir(parents=True, exist_ok=True)
         file_name = full_path(prefix=folder_prefix, **kwargs)
         
         # if the file already existed then don't do the computation again
@@ -323,13 +345,175 @@ def load_data(
         data = hdf5_io.load_from_hdf5(f)
         return data
 
+def finite_scaling(
+    # model params, should be input
+    Jx = 0.5,
+    Jy = 0.5,
+    Jz = 0,
+    L = 3,
 
+    # next there are some DMRG params
+    # tolerance for entropy calc error, should be input
+    max_S_err = 1e-4,
+    N_sweeps_check = 5,
+    max_sweeps = 1000,
+
+    # bond dimension list, should be input
+    chi_list = range(8, 50, 2),
+    
+    # initial wave function
+    psi = None,
+
+    verbose = 1,
+    
+    # should we load the existing files and also save the results into files
+    save_and_load = False,
+    
+    # should we do plotting after calculation
+    plot = False,
+):
+    """
+        Computing the finite-scaling cases at a specific `J=(Jx, Jy, Jz)`, over a specific bond dimension region.
+    """
+    
+    if save_and_load:
+        # folder name
+        prefix = f'data_L_{L}_comb/'
+        # if there is no such folder, create another one; if exists, doesn't matter
+        Path(prefix).mkdir(parents=True, exist_ok=True)
+        run_save = save_after_run(run_atomic, folder_prefix=prefix)
+
+
+    S_list = []
+    xi_list = []
+
+    psi = psi
+    
+    for chi in chi_list:
+        
+        if save_and_load:
+            data = run_save(
+                Jx = Jx,
+                Jy = Jy,
+                Jz = Jz,
+                L = L,
+                max_S_err=max_S_err,
+                chi = chi,
+                initial_psi=psi,
+                N_sweeps_check=N_sweeps_check,    
+                max_sweeps=max_sweeps, 
+                verbose=verbose,
+            )
+
+            if data==0:
+                data = load_data(Jx = Jx, Jy = Jy, Jz = Jz, L = L, chi = chi, prefix = prefix)
+                pass
+            pass
+        else:
+            data = run_atomic(
+                Jx = Jx,
+                Jy = Jy,
+                Jz = Jz,
+                L = L,
+                max_S_err=max_S_err,
+                chi = chi,
+                initial_psi=psi,
+                N_sweeps_check=N_sweeps_check,    
+                max_sweeps=max_sweeps, 
+                verbose=verbose,
+            )
+            pass
+        
+        psi = data['psi']
+        S_list.append(np.mean(psi.entanglement_entropy()))
+        xi_list.append(psi.correlation_length())        
+        pass
+    
+    if plot:
+        start = 0
+        end = -1
+
+        xs = np.log(xi_list[start:end])
+        ys = S_list[start:end]
+
+        def func(log_xi, c, a):
+            return (c / 6) * log_xi + a
+        fitParams, fitCovariances = curve_fit(func, xs, ys)
+
+        plt.plot(xs, ys, 'o', label='Data Points')
+        plt.xlabel(r'Log of Correlation Length, $\log\xi$')
+        plt.ylabel(r'Average Entanglement Entropy, $S$')
+
+        fitting_label = r'Curve Fitting: $S = \frac{c}{6}\log\xi + b$, c = %.2f, b= %.2f' % (fitParams[0], fitParams[1])
+        plt.plot(xs, func(xs, fitParams[0], fitParams[1]), label=fitting_label)
+
+        plt.legend()
+        title_name = f'Finite Scaling at J = ({Jx}, {Jy}, {Jz}), L={L}'
+        plt.title(title_name)
+
+        plt.show()
+        plt.savefig(title_name + '.png')
+        pass
+    return S_list, xi_list
+
+def fDMRG_KL(
+    Jx=1., 
+    Jy=1., 
+    Jz=1., 
+    L=3, 
+    chi=100, 
+    verbose=True, 
+    order='default', 
+    bc_MPS='finite', 
+    bc='open',
+    # to extract the low-lying excitation
+    orthogonal_to={}, 
+    ):
+    """
+        The finite DMRG for Kitaev Ladders
+    """
+    
+    print("finite DMRG, Kitaev ladder model")
+    print("L = {L:d}, Jx = {Jx:.2f}, Jy = {Jy:.2f}, Jz = {Jz:.2f}, ".format(L=L, Jx=Jx, Jy=Jy, Jz=Jz))
+    model_params = dict(L=L, Jx=Jx, Jy=Jy, Jz=Jz, bc_MPS=bc_MPS, bc=bc, conserve=None, order=order, verbose=verbose)
+    M = KitaevLadderModel(model_params)
+    
+    print("bc_MPS = ", M.lat.bc_MPS)
+    
+    product_state = [np.random.choice(["up", "down"]) for i in range(M.lat.N_sites)]
+    psi = MPS.from_product_state(M.lat.mps_sites(), product_state, bc=M.lat.bc_MPS)
+    dmrg_params = {
+#         'mixer': None,  # setting this to True helps to escape local minima
+        'mixer': True,
+        'mixer_params': {
+            'amplitude': 1.e-4,
+            'decay': 1.2,
+            'disable_after': 50
+        },
+        'max_E_err': 1.e-10,
+        'trunc_params': {
+            'chi_max': chi,
+            'svd_min': 1.e-10
+        },
+        'verbose': verbose,
+        'combine': True,
+        'orthogonal_to': orthogonal_to,
+    }
+    info = dmrg.run(psi, M, dmrg_params)  # the main work...
+    E = info['E']
+    print("E = {E:.13f}".format(E=E))
+    print("final bond dimensions: ", psi.chi) 
+
+    return E, psi, M
+
+# fDMRG_KL()
+# run_atomic()
 # run_save = save_after_run(run_atomic)
 # run_save()
 # data = load_data()
 # print(data["sweeps_stat"])
 # print(data["parameters"])
-# data = run_atomic(Jz=.5)
+# data = run_atomic(Jz=.5, bc='open', bc_MPS='finite')
 # psi = data['psi']
 # # run again at chi=30
 # next_data = run_atomic(Jz=.5, initial_psi=psi)
