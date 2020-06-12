@@ -42,9 +42,11 @@ def get_z_plus(x, y):
 def get_z_minus(x, y):
     return -get_z_plus(x, y)
 
-def get_xyz(a, b, biased=True):
+def get_xyz(a, b, biased=True, z_plus=True):
     x, y = get_xy(a, b)
     z = get_z_plus(x, y)
+    if not z_plus:
+        z = -1 * z
     if biased:
         x, y, z = avoid_special_points(x, y, z)
     return (x, y, z)
