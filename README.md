@@ -1,6 +1,9 @@
 # KitaevLadder
 Using TeNPy to simulate Kitaev Ladders. This will be part of my PSI essay work.
 
+## Notice for the PSI work
+To check with those mentioned in my PSI essay, please open and read the `Demo for the Essay.ipynb`.
+
 ## Using TeNPy
 TeNPy has already implemented the lattice structure for ladders.
 
