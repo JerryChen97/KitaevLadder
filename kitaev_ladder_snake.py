@@ -509,5 +509,3 @@ def fDMRG_KL(
     print("final bond dimensions: ", psi.chi) 
 
     return E, psi, M
-
-run_atomic(S=1)
