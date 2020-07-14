@@ -78,7 +78,8 @@ class KitaevLadderModel(CouplingMPOModel):
     def init_sites(self, model_params):
         # conserve = get_parameter(model_params, 'conserve', None, self.name)
         conserve = model_params.get('conserve', None)
-        fs = SpinHalfSite(conserve=conserve)
+        S = model_params.get('S', 0.5)
+        fs = SpinSite(S=S, conserve=conserve)
         return [fs, fs, fs, fs]
 
     def init_lattice(self, model_params):
@@ -147,6 +148,7 @@ def run_atomic(
     Jy=1., 
     Jz=0., 
     L=3, 
+    S=.5,
     bc='periodic',
     bc_MPS='infinite',
     # dmrg parameters
@@ -172,6 +174,7 @@ def run_atomic(
         Jy=Jy, 
         Jz=Jz, 
         L=L, 
+        S=S,
         verbose=verbose,
         bc=bc,
         bc_MPS=bc_MPS,
@@ -507,7 +510,7 @@ def fDMRG_KL(
     return E, psi, M
 
 # fDMRG_KL()
-# run_atomic()
+run_atomic(S=1)
 # run_save = save_after_run(run_atomic)
 # run_save()
 # data = load_data()

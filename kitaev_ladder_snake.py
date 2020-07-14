@@ -80,7 +80,7 @@ class KitaevLadderSnakeCompactModel(CouplingMPOModel):
         # conserve = get_parameter(model_params, 'conserve', None, self.name)
         conserve = model_params.get('conserve', None)
         S = model_params.get('S', 0.5)
-        fs = SpinHalfSite(conserve=conserve)
+        fs = SpinSite(S=S, conserve=conserve)
         return [fs, fs]
 
     def init_lattice(self, model_params):
@@ -117,11 +117,11 @@ class KitaevLadderSnakeCompactModel(CouplingMPOModel):
         Jz = model_params.get('Jz', 1.)
 
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_x']:
-            self.add_coupling(Jx, u1, 'Sigmax', u2, 'Sigmax', dx)
+            self.add_coupling(Jx, u1, 'Sx', u2, 'Sx', dx)
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_y']:
-            self.add_coupling(Jy, u1, 'Sigmay', u2, 'Sigmay', dx)         
+            self.add_coupling(Jy, u1, 'Sy', u2, 'Sy', dx)         
         for u1, u2, dx in self.lat.pairs['nearest_neighbors_z']:
-            self.add_coupling(Jz, u1, 'Sigmaz', u2, 'Sigmaz', dx)
+            self.add_coupling(Jz, u1, 'Sz', u2, 'Sz', dx)
         
 def plot_lattice():
     fig, ax = plt.subplots()
@@ -147,6 +147,7 @@ def run_atomic(
     Jy=1., 
     Jz=0., 
     L=4, 
+    S=.5,
     bc='periodic',
     bc_MPS='infinite',
     # dmrg parameters
@@ -172,6 +173,7 @@ def run_atomic(
         Jy=Jy, 
         Jz=Jz, 
         L=L, 
+        S=S,
         verbose=verbose,
         bc=bc,
         bc_MPS=bc_MPS,
@@ -507,3 +509,5 @@ def fDMRG_KL(
     print("final bond dimensions: ", psi.chi) 
 
     return E, psi, M
+
+run_atomic(S=1)
