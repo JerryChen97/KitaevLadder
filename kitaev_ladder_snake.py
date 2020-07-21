@@ -142,22 +142,22 @@ def plot_lattice():
 
 def run_atomic(
     # model parameters
-    chi=30,
+    chi=30, 
     Jx=1., 
     Jy=1., 
     Jz=0., 
     L=4, 
-    S=.5,
-    bc='periodic',
-    bc_MPS='infinite',
-    # dmrg parameters
+    S=.5, 
+    bc='periodic', 
+    bc_MPS='infinite', 
+    # dmrg parametersc
     initial_psi=None, # input psi
-    initial='random',
-    max_E_err=1.e-6,
-    max_S_err=1.e-4,
-    max_sweeps=200,
-    N_sweeps_check=10,
-    canonicalized=True,
+    initial='random', 
+    max_E_err=1.e-6, 
+    max_S_err=1.e-4, 
+    max_sweeps=200, 
+    N_sweeps_check=10, 
+    canonicalized=True, 
     # control for the verbose output
     verbose=1, 
 ):
@@ -353,6 +353,8 @@ def finite_scaling(
     Jy = 0.5,
     Jz = 0,
     L = 4,
+    S=.5,
+    
 
     # next there are some DMRG params
     # tolerance for entropy calc error, should be input
@@ -401,6 +403,7 @@ def finite_scaling(
                 Jy = Jy,
                 Jz = Jz,
                 L = L,
+                S= S,
                 max_S_err=max_S_err,
                 chi = chi,
                 initial_psi=psi,
@@ -419,6 +422,7 @@ def finite_scaling(
                 Jy = Jy,
                 Jz = Jz,
                 L = L,
+                S = S,
                 max_S_err=max_S_err,
                 chi = chi,
                 initial_psi=psi,
