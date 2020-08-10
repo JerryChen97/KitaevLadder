@@ -54,9 +54,9 @@ class KitaevLadderSnakeCompact(Lattice):
         kwargs.setdefault('basis', basis)
         kwargs.setdefault('positions', pos)
         
-        NNx = [(0, 1, np.array([0]))]
-        NNy = [(1, 0, np.array([1]))]
-        NNz = [(0, 1, np.array([1]))]
+        NNz = [(0, 1, np.array([0]))]
+        NNx = [(1, 0, np.array([1]))]
+        NNy = [(0, 1, np.array([1]))]
 #         nNNa = [(1, 2, np.array([0])), (3, 0, np.array([1]))]
 #         nNNb = [(0, 3, np.array([0])), (2, 1, np.array([1]))]
         
