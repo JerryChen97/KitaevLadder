@@ -145,8 +145,9 @@ def run_atomic(
     chi=30, 
     Jx=1., 
     Jy=1., 
-    Jz=0., 
-    L=4, 
+    Jz=0.,
+    
+    L=4,     
     S=.5, 
     bc='periodic', 
     bc_MPS='infinite', 
@@ -396,6 +397,126 @@ def finite_scaling(
     psi = psi
     
     for chi in chi_list:
+        
+        if save_and_load:
+            data = run_save(
+                Jx = Jx,
+                Jy = Jy,
+                Jz = Jz,
+                L = L,
+                S= S,
+                max_S_err=max_S_err,
+                chi = chi,
+                initial_psi=psi,
+                N_sweeps_check=N_sweeps_check,    
+                max_sweeps=max_sweeps, 
+                verbose=verbose,
+            )
+
+            if data==0:
+                data = load_data(Jx = Jx, Jy = Jy, Jz = Jz, L = L, chi = chi, prefix = prefix)
+                pass
+            pass
+        else:
+            data = run_atomic(
+                Jx = Jx,
+                Jy = Jy,
+                Jz = Jz,
+                L = L,
+                S = S,
+                max_S_err=max_S_err,
+                chi = chi,
+                initial_psi=psi,
+                N_sweeps_check=N_sweeps_check,    
+                max_sweeps=max_sweeps, 
+                verbose=verbose,
+            )
+            pass
+        
+        psi = data['psi']
+        S_list.append(np.mean(psi.entanglement_entropy()))
+        xi_list.append(psi.correlation_length())        
+        pass
+    
+    if plot:
+        start = 0
+        end = -1
+
+        xs = np.log(xi_list[start:end])
+        ys = S_list[start:end]
+
+        def func(log_xi, c, a):
+            return (c / 6) * log_xi + a
+        fitParams, fitCovariances = curve_fit(func, xs, ys)
+
+        plt.plot(xs, ys, 'o', label='Data Points')
+        plt.xlabel(r'Log of Correlation Length, $\log\xi$')
+        plt.ylabel(r'Average Entanglement Entropy, $S$')
+
+        fitting_label = r'Curve Fitting: $S = \frac{c}{6}\log\xi + b$, c = %.2f, b= %.2f' % (fitParams[0], fitParams[1])
+        plt.plot(xs, func(xs, fitParams[0], fitParams[1]), label=fitting_label)
+
+        plt.legend()
+        title_name = f'Finite Scaling at J = ({Jx}, {Jy}, {Jz}), L={L}'
+        plt.title(title_name)
+        plt.savefig(title_name + '.png')
+
+        plt.show()
+        pass
+    return S_list, xi_list
+
+"""
+    By 'parameter sweep' we mean a linear sweep starting from a specific J and change it a little bit every time
+"""
+def param_sweep(
+    # model param list, should be input
+    J_list,
+    
+    L = 4,
+    S=.5,
+    
+
+    # next there are some DMRG params
+    # tolerance for entropy calc error, should be input
+    max_S_err = 1e-4,
+    N_sweeps_check = 5,
+    max_sweeps = 1000,
+
+    # bond dimension list, should be input
+    chi = 128,
+    
+    # initial wave function
+    psi = None,
+
+    verbose = 1,
+    
+    # should we load the existing files and also save the results into files
+    save_and_load = False,
+
+    prefix = 'snake/',
+    
+    # should we do plotting after calculation
+    plot = False,
+):
+    """
+        Computing the finite-scaling cases at a specific bond dimension `chi`, over a specific parameter region.
+    """
+    
+    if save_and_load:
+        # folder name
+        # prefix = f'data_L_{L}_comb/'
+        # if there is no such folder, create another one; if exists, doesn't matter
+        Path(prefix).mkdir(parents=True, exist_ok=True)
+        run_save = save_after_run(run_atomic, folder_prefix=prefix)
+
+
+    S_list = []
+    xi_list = []
+
+    psi = psi
+    
+    for J in J_list:
+        Jx, Jy, Jz = J
         
         if save_and_load:
             data = run_save(
