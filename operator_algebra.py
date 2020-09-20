@@ -189,7 +189,12 @@ def gen_local_ops(
     return all_ops
 
 def gen_global_sym_S_range(srange=4):
-    return [Op(ops=[1 for k in range(srange*2 + 2)]), Op(ops=[2 for k in range(srange*2 + 2)])]
+    X = Op(ops=[1 for k in range(srange*2 + 2)])
+    Y = Op(ops=[2 for k in range(srange*2 + 2)])
+    Z1= Op(ops = [3 if (k % 4 == 1 or k % 4 == 2) else 0 for k in range(srange*2 + 2)])
+    Z2= Op(ops = [0 if (k % 4 == 1 or k % 4 == 2) else 3 for k in range(srange*2 + 2)])
+    
+    return [X, Y, Z1, Z2]
 
 def gen_local_order_parameter_candidates(range_int=4):
     D_list = gen_local_sym_D_range(srange=range_int)
