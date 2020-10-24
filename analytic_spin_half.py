@@ -1,4 +1,6 @@
 import numpy as np
+from scipy import integrate
+from scipy.integrate import quad
 
 def energy(k, Jx=1, Jy=1, Jz=1, D=1):
     assert D == -1 or D == 1
@@ -26,6 +28,9 @@ def energy_sum(Jx=1, Jy=1, Jz=1, bc='periodic', N=100):
 
 def energy_average(Jx=1, Jy=1, Jz=1, bc='periodic', N=100):
     return energy_sum(Jx=Jx, Jy=Jy, Jz=Jz, bc=bc, N=N) / N
+
+def energy_average_true(Jx, Jy, Jz):
+    return quad(lambda x:(energy_true(Jx=Jx, Jy=Jy, Jz=Jz, k=x) / (2 * np.pi)), 0, np.pi)
 
 def energy_difference(Jx=1, Jy=1, Jz=1, N=100):
     return energy_sum(Jx=Jx, Jy=Jy, Jz=Jz, bc='periodic', N=N)-energy_sum(Jx=Jx, Jy=Jy, Jz=Jz, bc='antiperiodic', N=N)

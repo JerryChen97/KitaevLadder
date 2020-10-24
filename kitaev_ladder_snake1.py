@@ -80,7 +80,10 @@ class KitaevLadderSnakeCompactModel(CouplingMPOModel):
         # conserve = get_parameter(model_params, 'conserve', None, self.name)
         conserve = model_params.get('conserve', None)
         S = model_params.get('S', 0.5)
-        fs = SpinSite(S=S, conserve=conserve)
+        if S==0.5:
+            fs = SpinHalfSite(conserve=conserve)
+        else:
+            fs = SpinSite(S=S, conserve=conserve)
         return [fs, fs]
 
     def init_lattice(self, model_params):
@@ -116,12 +119,22 @@ class KitaevLadderSnakeCompactModel(CouplingMPOModel):
         Jy = model_params.get('Jy', 1.)
         Jz = model_params.get('Jz', 1.)
 
-        for u1, u2, dx in self.lat.pairs['nearest_neighbors_x']:
-            self.add_coupling(Jx, u1, 'Sx', u2, 'Sx', dx)
-        for u1, u2, dx in self.lat.pairs['nearest_neighbors_y']:
-            self.add_coupling(Jy, u1, 'Sy', u2, 'Sy', dx)         
-        for u1, u2, dx in self.lat.pairs['nearest_neighbors_z']:
-            self.add_coupling(Jz, u1, 'Sz', u2, 'Sz', dx)
+
+        S = model_params.get('S', 0.5)
+        if S==0.5:
+            for u1, u2, dx in self.lat.pairs['nearest_neighbors_x']:
+                self.add_coupling(Jx, u1, 'Sigmax', u2, 'Sigmax', dx)
+            for u1, u2, dx in self.lat.pairs['nearest_neighbors_y']:
+                self.add_coupling(Jy, u1, 'Sigmay', u2, 'Sigmay', dx)         
+            for u1, u2, dx in self.lat.pairs['nearest_neighbors_z']:
+                self.add_coupling(Jz, u1, 'Sigmaz', u2, 'Sigmaz', dx)
+        else:
+            for u1, u2, dx in self.lat.pairs['nearest_neighbors_x']:
+                self.add_coupling(Jx, u1, 'Sx', u2, 'Sx', dx)
+            for u1, u2, dx in self.lat.pairs['nearest_neighbors_y']:
+                self.add_coupling(Jy, u1, 'Sy', u2, 'Sy', dx)         
+            for u1, u2, dx in self.lat.pairs['nearest_neighbors_z']:
+                self.add_coupling(Jz, u1, 'Sz', u2, 'Sz', dx)
         
 def plot_lattice():
     fig, ax = plt.subplots()
@@ -634,3 +647,65 @@ def fDMRG_KL(
     print("final bond dimensions: ", psi.chi) 
 
     return E, psi, M
+
+def fDMRG_KL_low_lying(
+    Jx, 
+    Jy, 
+    Jz, 
+    L, 
+    k, # indicating the number of low-lying states to extract
+    chi=128, 
+    verbose=True, 
+    order='default', 
+    bc='open',
+    ):
+    """
+        Extracting the first k low-lying states
+    """
+    bc_MPS='finite' # according to TeNPy, this argument should be set as 'finite'
+    
+    print(f"finite DMRG, Kitaev ladder model, extracting the {k} lowest-lying states")
+    print("L = {L:d}, Jx = {Jx:.2f}, Jy = {Jy:.2f}, Jz = {Jz:.2f}, ".format(L=L, Jx=Jx, Jy=Jy, Jz=Jz))
+    model_params = dict(L=L, Jx=Jx, Jy=Jy, Jz=Jz, bc_MPS=bc_MPS, bc=bc, conserve=None, order=order, verbose=verbose)
+    M = KitaevLadderSnakeCompactModel(model_params)
+    
+    print("bc_MPS = ", M.lat.bc_MPS)
+    
+    product_state = [np.random.choice(["up", "down"]) for i in range(M.lat.N_sites)]
+    psi = MPS.from_product_state(M.lat.mps_sites(), product_state, bc=M.lat.bc_MPS)
+    
+    E_list = []
+    psi_list = []
+    orthogonal_to = []
+    dmrg_params = {
+#         'mixer': None,  # setting this to True helps to escape local minima
+        'mixer': True,
+        'mixer_params': {
+            'amplitude': 1.e-4,
+            'decay': 1.2,
+            'disable_after': 50
+        },
+        'max_E_err': 1.e-10,
+        'trunc_params': {
+            'chi_max': chi,
+            'svd_min': 1.e-10
+        },
+        'verbose': verbose,
+        'combine': True,
+        'orthogonal_to': orthogonal_to,
+    }
+
+    for i in range(k):
+        info = dmrg.run(psi, M, dmrg_params)  # the main work...
+        E = info['E'] 
+        print(f'The fDMRG run for {i}th state finished!')
+        print("E = {E:.13f}".format(E=E))
+        print("final bond dimensions: ", psi.chi) 
+
+        E_list.append(E)
+        psi_list.append(psi.copy())
+        orthogonal_to.append(psi.copy())
+        dmrg_params['orthogonal_to'] = orthogonal_to
+
+    return E_list, psi_list
+    
