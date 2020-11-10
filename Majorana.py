@@ -61,17 +61,31 @@ def H_fermionic_skew(Jx, Jy, Jz, N, SigmaY, D_list, bc):
 
     return H - H.T
     
-def get_Majorana_spectrum(Jx, Jy, Jz, N, SigmaY, D_list, bc):
+def get_Majorana_spectrum(
+    Jx, Jy, Jz, 
+    N, 
+    SigmaY, 
+    D_list, 
+    bc, 
+    method='M2',
+    ):
     """
         Calculate the Majorana spectrum of a given configuration
     """
     H_skew = H_fermionic_skew(Jx, Jy, Jz, N, SigmaY, D_list, bc)
-    H = 1j * H_skew
 
     # The matrix H is of dim 4N
     # and the eigenvalues will be given in descending order,
     # so by simply only taking the first 2N values one can successfully get the true values
-    eigenvalues = np.linalg.eigvalsh(H)[0:2*N] # not necessary sort again since it's already sorted
+    assert method=='iM' or method=='M2'
+    if method=='iM': # get the eigenvalues via solving the eigen-problem of iM
+        H = 1j * H_skew
+        eigenvalues = np.linalg.eigvalsh(H)[0:2*N] # not necessary sort again since it's already sorted
+    elif method=='M2': # get the eigenvalues via solving the M**2
+        H = H_skew @ H_skew 
+        eigenvalues = np.abs(np.linalg.eigvalsh(H)[::2])
+        eigenvalues = -np.sqrt(eigenvalues)
+
     if any(eigenvalues>0):
         raise ValueError("WRONG: Positiveness in the spectra!")
     return eigenvalues
@@ -85,8 +99,13 @@ def test():
 
     D_list = [1 for i in range(2*N)]
     spec = get_Majorana_spectrum(Jx,Jy,Jz,N,1,D_list,bc)
-    print(np.sum(spec))
+    print((spec))
 
-    D_list = [-1 for i in range(2*N)]
-    spec = get_Majorana_spectrum(Jx,Jy,Jz,N,1,D_list,bc)
-    print(np.sum(spec))
+    # D_list = [-1 for i in range(2*N)]
+    # spec = get_Majorana_spectrum(Jx,Jy,Jz,N,1,D_list,bc)
+    # print((spec))
+
+    method = 'M2'
+    print(get_Majorana_spectrum(Jx, Jy, Jz, N, 1, D_list, bc, method=method))
+
+# test()
