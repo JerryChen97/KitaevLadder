@@ -90,6 +90,45 @@ def get_Majorana_spectrum(
         raise ValueError("WRONG: Positiveness in the spectra!")
     return eigenvalues
 
+def get_parity(
+    Jx, Jy, Jz, 
+    N, 
+    SigmaY, 
+    D_list, 
+    bc, 
+    method='M2',
+    ):
+    H_skew = H_fermionic_skew(Jx, Jy, Jz, N, SigmaY, D_list, bc)
+    t, Q = decompose_skew_schur(H_skew)
+    return np.round(la.det(Q) * np.prod(D_list))
+
+def get_two_E(Jx, Jy, Jz, N, bc='periodic'):
+    E_list = []
+    
+    D_list = [1 for i in range(2*N)]
+    for SigmaY in [1 , -1]:
+        if get_parity(Jx, Jy, Jz, N, SigmaY, D_list, bc)==1:
+            E_list.append(np.sum(get_Majorana_spectrum(Jx, Jy, Jz, N, SigmaY, D_list, bc)))
+    
+    D_list[-1] *= -1
+    for SigmaY in [1 , -1]:
+        if get_parity(Jx, Jy, Jz, N, SigmaY, D_list, bc)==1:
+            E_list.append(np.sum(get_Majorana_spectrum(Jx, Jy, Jz, N, SigmaY, D_list, bc)))
+            
+    return E_list
+
+def get_lowest_E(Jx, Jy, Jz, N, D_list, bc='periodic'):
+    E_list = []
+    for SigmaY in [1, -1]:
+        E_spec = get_Majorana_spectrum(Jx, Jy, Jz, N, SigmaY, D_list, bc)
+        E_sum = np.sum(E_spec)
+        E_min = np.max(E_spec)
+        if get_parity(Jx, Jy, Jz, N, SigmaY, D_list, bc) == 1:
+            E_list.append(E_sum)
+        else:
+            E_list.append(E_sum - 2*E_min)
+    return E_list
+
 def test():
     Jx=1
     Jy=1
